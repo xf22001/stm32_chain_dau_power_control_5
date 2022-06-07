@@ -6,7 +6,7 @@
  *   文件名称：power_manager_group_policy_handler.c
  *   创 建 者：肖飞
  *   创建日期：2022年06月02日 星期四 16时27分25秒
- *   修改日期：2022年06月06日 星期一 17时25分20秒
+ *   修改日期：2022年06月07日 星期二 17时33分14秒
  *   描    述：
  *
  *================================================================*/
@@ -1075,6 +1075,9 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 				                  power_manager_channel_info_item->id);
 				OS_ASSERT(relay_node_info != NULL);
 				set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
+			} else {
+				debug("power module group %d not in channel %d", power_module_group_info->id, power_manager_channel_info->id);
+				break;
 			}
 		}
 
@@ -1135,6 +1138,9 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 				                  power_manager_channel_info_item->id);
 				OS_ASSERT(relay_node_info != NULL);
 				set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
+			} else {
+				debug("power module group %d not in channel %d", power_module_group_info->id, power_manager_channel_info->id);
+				break;
 			}
 		}
 
