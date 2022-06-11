@@ -90,7 +90,7 @@ b app
 b dummy_log
 	commands
 		silent
-		printf "%s\n", buffer
+		printf "%s", buffer
 		c
 	end
 
