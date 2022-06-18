@@ -6,7 +6,7 @@
  *   文件名称：power_manager_group_policy_handler.c
  *   创 建 者：肖飞
  *   创建日期：2022年06月02日 星期四 16时27分25秒
- *   修改日期：2022年06月07日 星期二 17时33分14秒
+ *   修改日期：2022年06月18日 星期六 14时18分53秒
  *   描    述：
  *
  *================================================================*/
@@ -78,11 +78,20 @@ static relay_node_info_t relay_node_info_0_3 = {
 
 static relay_node_info_t relay_node_info_0_4 = {
 	.relay_id = 4,
-	.channel_id = {4, 0},
+	.channel_id = {4, 5},
 	.gpio_port = kg5_GPIO_Port,//km5-kg5
 	.gpio_pin = kg5_Pin,
 	.gpio_port_fb = fb5_GPIO_Port,
 	.gpio_pin_fb = fb5_Pin,
+};
+
+static relay_node_info_t relay_node_info_0_5 = {
+	.relay_id = 5,
+	.channel_id = {5, 0},
+	.gpio_port = kg6_GPIO_Port,//km6-kg6
+	.gpio_pin = kg6_Pin,
+	.gpio_port_fb = in4_GPIO_Port,
+	.gpio_pin_fb = in4_Pin,
 };
 
 static relay_node_info_t *relay_node_info_0_sz[] = {
@@ -91,6 +100,7 @@ static relay_node_info_t *relay_node_info_0_sz[] = {
 	&relay_node_info_0_2,
 	&relay_node_info_0_3,
 	&relay_node_info_0_4,
+	&relay_node_info_0_5,
 };
 
 static power_manager_group_relay_info_t power_manager_group_relay_info_0 = {
@@ -240,12 +250,18 @@ static channel_power_module_group_bind_item_info_t channel_power_module_group_bi
 	.power_module_group_id = {4},
 };
 
+static channel_power_module_group_bind_item_info_t channel_power_module_group_bind_item_info_0_5 = {
+	.channel_id = 5,
+	.power_module_group_id = {5},
+};
+
 static channel_power_module_group_bind_item_info_t *channel_power_module_group_bind_item_info_sz[] = {
 	&channel_power_module_group_bind_item_info_0_0,
 	&channel_power_module_group_bind_item_info_0_1,
 	&channel_power_module_group_bind_item_info_0_2,
 	&channel_power_module_group_bind_item_info_0_3,
 	&channel_power_module_group_bind_item_info_0_4,
+	&channel_power_module_group_bind_item_info_0_5,
 };
 
 static group_channel_power_module_group_bind_info_t group_channel_power_module_group_bind_info_0 = {
@@ -359,12 +375,21 @@ static channel_relay_fb_node_info_t channel_relay_fb_node_info_4 = {
 	.rank = 4,
 };
 
+static channel_relay_fb_node_info_t channel_relay_fb_node_info_5 = {
+	.channel_id = 5,
+	.gpio_port_fb = in3_GPIO_Port,
+	.gpio_pin_fb = in3_Pin,
+	.hadc = &hadc1,
+	.rank = 5,
+};
+
 static channel_relay_fb_node_info_t *channel_relay_fb_node_info_sz[] = {
 	&channel_relay_fb_node_info_0,
 	&channel_relay_fb_node_info_1,
 	&channel_relay_fb_node_info_2,
 	&channel_relay_fb_node_info_3,
 	&channel_relay_fb_node_info_4,
+	&channel_relay_fb_node_info_5,
 };
 
 static power_manager_group_channel_relay_fb_info_t power_manager_group_channel_relay_fb_info_0 = {

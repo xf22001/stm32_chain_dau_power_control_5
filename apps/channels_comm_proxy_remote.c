@@ -6,7 +6,7 @@
  *   文件名称：channels_comm_proxy_remote.c
  *   创 建 者：肖飞
  *   创建日期：2021年09月16日 星期四 10时34分46秒
- *   修改日期：2022年06月02日 星期四 17时10分07秒
+ *   修改日期：2022年06月18日 星期六 12时56分59秒
  *   描    述：
  *
  *================================================================*/
@@ -41,6 +41,7 @@ typedef struct {
 	can_tx_msg_t can_tx_msg;
 	can_rx_msg_t *can_rx_msg;
 	uint32_t periodic_stamp;
+	uint32_t power_supply_alive_stamp;
 	can_data_task_info_t *can_data_task_info;
 	callback_item_t can_data_request_cb;
 	callback_item_t can_data_response_cb;
@@ -209,6 +210,10 @@ static int response_channel_require(channels_info_t *channels_info, void *_comma
 			cmd_ctx_module_ready->state = COMMAND_STATE_IDLE;
 			channel_request_stop(channel_info, channel_record_item_stop_reason_fault(CHANNEL_FAULT_FAULT));
 		}
+	}
+
+	if(channel_require->charger_connected != 0) {
+		channels_comm_proxy_ctx->power_supply_alive_stamp = osKernelSysTick();
 	}
 
 	cmd_ctx->state = COMMAND_STATE_REQUEST;
@@ -644,12 +649,21 @@ static void channels_comm_proxy_request_periodic(channels_info_t *channels_info)
 	uint32_t ticks = osKernelSysTick();
 	int i;
 	int j;
+	GPIO_PinState power_supply = GPIO_PIN_SET;
 
 	if(ticks_duration(ticks, channels_comm_proxy_ctx->periodic_stamp) < 50) {
 		return;
 	}
 
 	channels_comm_proxy_ctx->periodic_stamp = ticks;
+
+	if(ticks_duration(ticks, channels_comm_proxy_ctx->power_supply_alive_stamp) > 5 * 1000) {
+		power_supply = GPIO_PIN_RESET;
+	}
+
+	if(channels_config->power_supply_port != NULL) {
+		HAL_GPIO_WritePin(channels_config->power_supply_port, channels_config->power_supply_pin, power_supply);
+	}
 
 	handle_channel_connect_timeout(channels_info);
 
