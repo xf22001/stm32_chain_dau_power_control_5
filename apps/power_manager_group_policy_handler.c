@@ -6,7 +6,7 @@
  *   文件名称：power_manager_group_policy_handler.c
  *   创 建 者：肖飞
  *   创建日期：2022年06月02日 星期四 16时27分25秒
- *   修改日期：2022年06月20日 星期一 11时34分04秒
+ *   修改日期：2022年06月20日 星期一 13时57分01秒
  *   描    述：
  *
  *================================================================*/
@@ -997,7 +997,7 @@ static int _config(void *_power_manager_group_info)
 	int ret = 0;
 	power_manager_group_info_t *power_manager_group_info = (power_manager_group_info_t *)_power_manager_group_info;
 	debug("power manager group %d config", power_manager_group_info->id);
-	action_relay_map(power_manager_group_info);
+	ret = action_relay_map(power_manager_group_info);
 
 	return ret;
 }
