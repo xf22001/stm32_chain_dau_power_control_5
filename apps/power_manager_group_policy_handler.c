@@ -105,8 +105,8 @@ static relay_node_info_t *relay_node_info_0_sz[] = {
 
 static power_manager_group_relay_info_t power_manager_group_relay_info_0 = {
 	.power_manager_group_id = 0,
-	.relay_node_info = relay_node_info_0_sz,
 	.size = ARRAY_SIZE(relay_node_info_0_sz),
+	.relay_node_info = relay_node_info_0_sz,
 };
 
 static power_manager_group_relay_info_t *power_manager_relay_info_sz[] = {
@@ -806,7 +806,7 @@ static void channel_info_assign_one_power_module_group_average(power_manager_cha
 	while(1) {
 		uint8_t next_id;
 		relay_node_info_t *relay_node_info;
-		uint8_t power_module_group_bind_node_unavailable = 0;
+		uint8_t power_module_group_bind_node_state = 0;//0:未使用 1:已被当前通道使用 2:已被其它通道使用
 
 		if(power_module_group_bind_node_item_prev->id == 0) {
 			next_id = bind_node_size - 1;
@@ -817,24 +817,7 @@ static void channel_info_assign_one_power_module_group_average(power_manager_cha
 		power_module_group_bind_node_item_next = get_power_module_group_bind_node_by_id(power_manager_group_info->id, next_id);
 		OS_ASSERT(power_module_group_bind_node_item_next != NULL);
 
-		if(power_module_group_bind_node_item_next->channel_id == 0xff) {//纯功率节点
-			//节点绑定的模块组中都未在使用中
-			for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
-				power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
-
-				if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
-					continue;
-				}
-
-				//不使用有故障的模块
-				//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
-				//	continue;
-				//}
-
-				power_module_group_bind_node_unavailable = 1;
-				break;
-			}
-		} else {//通道绑定节点
+		if(power_module_group_bind_node_item_next->channel_id != 0xff) {//通道绑定节点
 			//节点绑定的通道未在使用中
 			power_manager_channel_info_t *power_manager_channel_info_item = power_manager_info->power_manager_channel_info + power_module_group_bind_node_item_next->channel_id;
 
@@ -843,7 +826,34 @@ static void channel_info_assign_one_power_module_group_average(power_manager_cha
 			}
 		}
 
-		if(power_module_group_bind_node_unavailable == 1) {
+		//节点绑定的模块组中都未在使用中
+		for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
+
+			if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
+				continue;
+			}
+
+			//不使用有故障的模块
+			//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
+			//	continue;
+			//}
+
+			//已在使用中
+			if(list_contain(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list) == 0) {//被当前通道使用
+				power_module_group_bind_node_state = 1;
+				break;
+			}
+
+			//被其它通道使用
+			power_module_group_bind_node_state = 2;
+			break;
+		}
+
+		if(power_module_group_bind_node_state == 1) {
+			power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
+			continue;
+		} else if(power_module_group_bind_node_state == 2) {
 			break;
 		}
 
@@ -885,7 +895,7 @@ static void channel_info_assign_one_power_module_group_average(power_manager_cha
 	while(1) {
 		uint8_t next_id;
 		relay_node_info_t *relay_node_info;
-		uint8_t power_module_group_bind_node_unavailable = 0;
+		uint8_t power_module_group_bind_node_state = 0;//0:未使用 1:已被当前通道使用 2:已被其它通道使用
 
 		if(power_module_group_bind_node_item_prev->id >= (bind_node_size - 1)) {
 			next_id = 0;
@@ -896,24 +906,7 @@ static void channel_info_assign_one_power_module_group_average(power_manager_cha
 		power_module_group_bind_node_item_next = get_power_module_group_bind_node_by_id(power_manager_group_info->id, next_id);
 		OS_ASSERT(power_module_group_bind_node_item_next != NULL);
 
-		if(power_module_group_bind_node_item_next->channel_id == 0xff) {//纯功率节点
-			//节点绑定的模块组中都未在使用中
-			for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
-				power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
-
-				if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
-					continue;
-				}
-
-				//不使用有故障的模块
-				//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
-				//	continue;
-				//}
-
-				power_module_group_bind_node_unavailable = 1;
-				break;
-			}
-		} else {//通道绑定节点
+		if(power_module_group_bind_node_item_next->channel_id != 0xff) {//通道绑定节点
 			//节点绑定的通道未在使用中
 			power_manager_channel_info_t *power_manager_channel_info_item = power_manager_info->power_manager_channel_info + power_module_group_bind_node_item_next->channel_id;
 
@@ -922,7 +915,34 @@ static void channel_info_assign_one_power_module_group_average(power_manager_cha
 			}
 		}
 
-		if(power_module_group_bind_node_unavailable == 1) {
+		//节点绑定的模块组中都未在使用中
+		for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
+
+			if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
+				continue;
+			}
+
+			//不使用有故障的模块
+			//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
+			//	continue;
+			//}
+
+			//已在使用中
+			if(list_contain(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list) == 0) {//被当前通道使用
+				power_module_group_bind_node_state = 1;
+				break;
+			}
+
+			//被其它通道使用
+			power_module_group_bind_node_state = 2;
+			break;
+		}
+
+		if(power_module_group_bind_node_state == 1) {
+			power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
+			continue;
+		} else if(power_module_group_bind_node_state == 2) {
 			break;
 		}
 
@@ -1146,7 +1166,7 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 	while(1) {
 		uint8_t next_id;
 		relay_node_info_t *relay_node_info;
-		uint8_t power_module_group_bind_node_unavailable = 0;
+		uint8_t power_module_group_bind_node_state = 0;//0:未使用 1:已被当前通道使用 2:已被其它通道使用
 
 		assigned = list_size(&power_manager_channel_info->power_module_group_list);
 
@@ -1164,24 +1184,7 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 		power_module_group_bind_node_item_next = get_power_module_group_bind_node_by_id(power_manager_group_info->id, next_id);
 		OS_ASSERT(power_module_group_bind_node_item_next != NULL);
 
-		if(power_module_group_bind_node_item_next->channel_id == 0xff) {//纯功率节点
-			//节点绑定的模块组中都未在使用中
-			for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
-				power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
-
-				if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
-					continue;
-				}
-
-				//不使用有故障的模块
-				//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
-				//	continue;
-				//}
-
-				power_module_group_bind_node_unavailable = 1;
-				break;
-			}
-		} else {//通道绑定节点
+		if(power_module_group_bind_node_item_next->channel_id != 0xff) {//通道绑定节点
 			//节点绑定的通道未在使用中
 			power_manager_channel_info_t *power_manager_channel_info_item = power_manager_info->power_manager_channel_info + power_module_group_bind_node_item_next->channel_id;
 
@@ -1190,11 +1193,36 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 			}
 		}
 
-		if(power_module_group_bind_node_unavailable == 1) {
+		//节点绑定的模块组中都未在使用中
+		for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
+
+			if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
+				continue;
+			}
+
+			//不使用有故障的模块
+			//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
+			//	continue;
+			//}
+
+			//已在使用中
+			if(list_contain(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list) == 0) {//被当前通道使用
+				power_module_group_bind_node_state = 1;
+				break;
+			}
+
+			//被其它通道使用
+			power_module_group_bind_node_state = 2;
 			break;
 		}
 
-		power_module_group_bind_node_unavailable = 1;
+		if(power_module_group_bind_node_state == 1) {
+			power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
+			continue;
+		} else if(power_module_group_bind_node_state == 2) {
+			break;
+		}
 
 		for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
 			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
@@ -1203,14 +1231,7 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 				list_move_tail(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list);
 
 				debug("restore power module group %d to channel %d", power_module_group_info->id, power_manager_channel_info->id);
-
-				power_module_group_bind_node_unavailable = 0;
-
 			}
-		}
-
-		if(power_module_group_bind_node_unavailable == 1) {
-			break;
 		}
 
 		//set relay power_module_group_bind_node_item_prev---power_module_group_bind_node_item_next, by id
@@ -1230,7 +1251,7 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 	while(1) {
 		uint8_t next_id;
 		relay_node_info_t *relay_node_info;
-		uint8_t power_module_group_bind_node_unavailable = 0;
+		uint8_t power_module_group_bind_node_state = 0;//0:未使用 1:已被当前通道使用 2:已被其它通道使用
 
 		assigned = list_size(&power_manager_channel_info->power_module_group_list);
 
@@ -1248,24 +1269,7 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 		power_module_group_bind_node_item_next = get_power_module_group_bind_node_by_id(power_manager_group_info->id, next_id);
 		OS_ASSERT(power_module_group_bind_node_item_next != NULL);
 
-		if(power_module_group_bind_node_item_next->channel_id == 0xff) {//纯功率节点
-			//节点绑定的模块组中都未在使用中
-			for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
-				power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
-
-				if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
-					continue;
-				}
-
-				//不使用有故障的模块
-				//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
-				//	continue;
-				//}
-
-				power_module_group_bind_node_unavailable = 1;
-				break;
-			}
-		} else {//通道绑定节点
+		if(power_module_group_bind_node_item_next->channel_id != 0xff) {//通道绑定节点
 			//节点绑定的通道未在使用中
 			power_manager_channel_info_t *power_manager_channel_info_item = power_manager_info->power_manager_channel_info + power_module_group_bind_node_item_next->channel_id;
 
@@ -1274,11 +1278,36 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 			}
 		}
 
-		if(power_module_group_bind_node_unavailable == 1) {
+		//节点绑定的模块组中都未在使用中
+		for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
+
+			if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
+				continue;
+			}
+
+			//不使用有故障的模块
+			//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
+			//	continue;
+			//}
+
+			//已在使用中
+			if(list_contain(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list) == 0) {//被当前通道使用
+				power_module_group_bind_node_state = 1;
+				break;
+			}
+
+			//被其它通道使用
+			power_module_group_bind_node_state = 2;
 			break;
 		}
 
-		power_module_group_bind_node_unavailable = 1;
+		if(power_module_group_bind_node_state == 1) {
+			power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
+			continue;
+		} else if(power_module_group_bind_node_state == 2) {
+			break;
+		}
 
 		for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
 			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
@@ -1287,14 +1316,7 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 				list_move_tail(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list);
 
 				debug("restore power module group %d to channel %d", power_module_group_info->id, power_manager_channel_info->id);
-
-				power_module_group_bind_node_unavailable = 0;
-
 			}
-		}
-
-		if(power_module_group_bind_node_unavailable == 1) {
-			break;
 		}
 
 		//set relay power_module_group_bind_node_item_prev---power_module_group_bind_node_item_next, by id
@@ -1403,7 +1425,7 @@ static void channel_info_assign_power_module_group_priority(power_manager_channe
 	while(1) {
 		uint8_t next_id;
 		relay_node_info_t *relay_node_info;
-		uint8_t power_module_group_bind_node_unavailable = 0;
+		uint8_t power_module_group_bind_node_state = 0;//0:未使用 1:已被当前通道使用 2:已被其它通道使用
 
 		assigned = list_size(&power_manager_channel_info->power_module_group_list);
 
@@ -1421,24 +1443,7 @@ static void channel_info_assign_power_module_group_priority(power_manager_channe
 		power_module_group_bind_node_item_next = get_power_module_group_bind_node_by_id(power_manager_group_info->id, next_id);
 		OS_ASSERT(power_module_group_bind_node_item_next != NULL);
 
-		if(power_module_group_bind_node_item_next->channel_id == 0xff) {//纯功率节点
-			//节点绑定的模块组中都未在使用中
-			for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
-				power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
-
-				if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
-					continue;
-				}
-
-				//不使用有故障的模块
-				//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
-				//	continue;
-				//}
-
-				power_module_group_bind_node_unavailable = 1;
-				break;
-			}
-		} else {//通道绑定节点
+		if(power_module_group_bind_node_item_next->channel_id != 0xff) {//通道绑定节点
 			//节点绑定的通道未在使用中
 			power_manager_channel_info_t *power_manager_channel_info_item = power_manager_info->power_manager_channel_info + power_module_group_bind_node_item_next->channel_id;
 
@@ -1447,7 +1452,34 @@ static void channel_info_assign_power_module_group_priority(power_manager_channe
 			}
 		}
 
-		if(power_module_group_bind_node_unavailable == 1) {
+		//节点绑定的模块组中都未在使用中
+		for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
+
+			if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
+				continue;
+			}
+
+			//不使用有故障的模块
+			//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
+			//	continue;
+			//}
+
+			//已在使用中
+			if(list_contain(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list) == 0) {//被当前通道使用
+				power_module_group_bind_node_state = 1;
+				break;
+			}
+
+			//被其它通道使用
+			power_module_group_bind_node_state = 2;
+			break;
+		}
+
+		if(power_module_group_bind_node_state == 1) {
+			power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
+			continue;
+		} else if(power_module_group_bind_node_state == 2) {
 			break;
 		}
 
@@ -1488,7 +1520,7 @@ static void channel_info_assign_power_module_group_priority(power_manager_channe
 	while(1) {
 		uint8_t next_id;
 		relay_node_info_t *relay_node_info;
-		uint8_t power_module_group_bind_node_unavailable = 0;
+		uint8_t power_module_group_bind_node_state = 0;//0:未使用 1:已被当前通道使用 2:已被其它通道使用
 
 		assigned = list_size(&power_manager_channel_info->power_module_group_list);
 
@@ -1506,24 +1538,7 @@ static void channel_info_assign_power_module_group_priority(power_manager_channe
 		power_module_group_bind_node_item_next = get_power_module_group_bind_node_by_id(power_manager_group_info->id, next_id);
 		OS_ASSERT(power_module_group_bind_node_item_next != NULL);
 
-		if(power_module_group_bind_node_item_next->channel_id == 0xff) {//纯功率节点
-			//节点绑定的模块组中都未在使用中
-			for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
-				power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
-
-				if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
-					continue;
-				}
-
-				//不使用有故障的模块
-				//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
-				//	continue;
-				//}
-
-				power_module_group_bind_node_unavailable = 1;
-				break;
-			}
-		} else {//通道绑定节点
+		if(power_module_group_bind_node_item_next->channel_id != 0xff) {//通道绑定节点
 			//节点绑定的通道未在使用中
 			power_manager_channel_info_t *power_manager_channel_info_item = power_manager_info->power_manager_channel_info + power_module_group_bind_node_item_next->channel_id;
 
@@ -1532,7 +1547,34 @@ static void channel_info_assign_power_module_group_priority(power_manager_channe
 			}
 		}
 
-		if(power_module_group_bind_node_unavailable == 1) {
+		//节点绑定的模块组中都未在使用中
+		for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
+
+			if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
+				continue;
+			}
+
+			//不使用有故障的模块
+			//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
+			//	continue;
+			//}
+
+			//已在使用中
+			if(list_contain(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list) == 0) {//被当前通道使用
+				power_module_group_bind_node_state = 1;
+				break;
+			}
+
+			//被其它通道使用
+			power_module_group_bind_node_state = 2;
+			break;
+		}
+
+		if(power_module_group_bind_node_state == 1) {
+			power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
+			continue;
+		} else if(power_module_group_bind_node_state == 2) {
 			break;
 		}
 
