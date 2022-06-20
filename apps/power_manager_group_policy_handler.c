@@ -6,7 +6,7 @@
  *   文件名称：power_manager_group_policy_handler.c
  *   创 建 者：肖飞
  *   创建日期：2022年06月02日 星期四 16时27分25秒
- *   修改日期：2022年06月18日 星期六 14时18分53秒
+ *   修改日期：2022年06月20日 星期一 11时34分04秒
  *   描    述：
  *
  *================================================================*/
@@ -22,7 +22,7 @@ extern ADC_HandleTypeDef hadc1;
 
 typedef struct {
 	uint8_t relay_id;
-	uint8_t channel_id[2];
+	uint8_t bind_node_id[2];
 	GPIO_TypeDef *gpio_port;
 	uint16_t gpio_pin;
 	GPIO_TypeDef *gpio_port_fb;
@@ -42,7 +42,7 @@ typedef struct {
 
 static relay_node_info_t relay_node_info_0_0 = {
 	.relay_id = 0,
-	.channel_id = {0, 1},
+	.bind_node_id = {0, 1},
 	.gpio_port = kg1_GPIO_Port,//km1-kg1
 	.gpio_pin = kg1_Pin,
 	.gpio_port_fb = fb1_GPIO_Port,
@@ -51,7 +51,7 @@ static relay_node_info_t relay_node_info_0_0 = {
 
 static relay_node_info_t relay_node_info_0_1 = {
 	.relay_id = 1,
-	.channel_id = {1, 2},
+	.bind_node_id = {1, 2},
 	.gpio_port = kg2_GPIO_Port,//km2-kg2
 	.gpio_pin = kg2_Pin,
 	.gpio_port_fb = fb2_GPIO_Port,
@@ -60,7 +60,7 @@ static relay_node_info_t relay_node_info_0_1 = {
 
 static relay_node_info_t relay_node_info_0_2 = {
 	.relay_id = 2,
-	.channel_id = {2, 3},
+	.bind_node_id = {2, 3},
 	.gpio_port = kg3_GPIO_Port,//km3-kg3
 	.gpio_pin = kg3_Pin,
 	.gpio_port_fb = fb3_GPIO_Port,
@@ -69,7 +69,7 @@ static relay_node_info_t relay_node_info_0_2 = {
 
 static relay_node_info_t relay_node_info_0_3 = {
 	.relay_id = 3,
-	.channel_id = {3, 4},
+	.bind_node_id = {3, 4},
 	.gpio_port = kg4_GPIO_Port,//km4-kg4
 	.gpio_pin = kg4_Pin,
 	.gpio_port_fb = fb4_GPIO_Port,
@@ -78,7 +78,7 @@ static relay_node_info_t relay_node_info_0_3 = {
 
 static relay_node_info_t relay_node_info_0_4 = {
 	.relay_id = 4,
-	.channel_id = {4, 5},
+	.bind_node_id = {4, 5},
 	.gpio_port = kg5_GPIO_Port,//km5-kg5
 	.gpio_pin = kg5_Pin,
 	.gpio_port_fb = fb5_GPIO_Port,
@@ -87,7 +87,7 @@ static relay_node_info_t relay_node_info_0_4 = {
 
 static relay_node_info_t relay_node_info_0_5 = {
 	.relay_id = 5,
-	.channel_id = {5, 0},
+	.bind_node_id = {5, 0},
 	.gpio_port = kg6_GPIO_Port,//km6-kg6
 	.gpio_pin = kg6_Pin,
 	.gpio_port_fb = in4_GPIO_Port,
@@ -118,13 +118,13 @@ static relay_info_t relay_info = {
 	.power_manager_group_relay_info = power_manager_relay_info_sz,
 };
 
-static relay_node_info_t *get_relay_node_info_by_channel_id(uint8_t power_manager_group_id, uint8_t channel_id_a, uint8_t channel_id_b)
+static relay_node_info_t *get_relay_node_info_by_bind_node_id(uint8_t power_manager_group_id, uint8_t bind_node_id_a, uint8_t bind_node_id_b)
 {
 	relay_node_info_t *relay_node_info = NULL;
 	power_manager_group_relay_info_t *power_manager_group_relay_info = NULL;
 	int i;
 
-	OS_ASSERT(channel_id_a != channel_id_b);
+	OS_ASSERT(bind_node_id_a != bind_node_id_b);
 
 	for(i = 0; i < relay_info.size; i++) {
 		power_manager_group_relay_info_t *power_manager_group_relay_info_item = relay_info.power_manager_group_relay_info[i];
@@ -145,7 +145,7 @@ static relay_node_info_t *get_relay_node_info_by_channel_id(uint8_t power_manage
 		uint8_t found = 1;
 
 		for(j = 0; j < 2; j++) {
-			if(channel_id_a == relay_node_info_item->channel_id[j]) {
+			if(bind_node_id_a == relay_node_info_item->bind_node_id[j]) {
 				break;
 			}
 		}
@@ -156,7 +156,7 @@ static relay_node_info_t *get_relay_node_info_by_channel_id(uint8_t power_manage
 		}
 
 		for(j = 0; j < 2; j++) {
-			if(channel_id_b == relay_node_info_item->channel_id[j]) {
+			if(bind_node_id_b == relay_node_info_item->bind_node_id[j]) {
 				break;
 			}
 		}
@@ -206,115 +206,172 @@ static relay_node_info_t *get_relay_node_info_by_relay_id(uint8_t power_manager_
 	return relay_node_info;
 }
 
-//一个通道绑定的电源模块组
+//一个功率节点绑定的电源模块组及通道信息
 typedef struct {
+	uint8_t id;
 	uint8_t channel_id;
 	uint8_t power_module_group_id[1];
-} channel_power_module_group_bind_item_info_t;
+} power_module_group_bind_node_t;
 
 //一个电源管理组内的通道绑定信息
 typedef struct {
 	uint8_t power_manager_group_id;
 	uint8_t size;
-	channel_power_module_group_bind_item_info_t **channel_power_module_group_bind_item_info;
-} group_channel_power_module_group_bind_info_t;
+	power_module_group_bind_node_t **power_module_group_bind_node;
+} group_power_module_group_bind_info_t;
 
 //所有电源管理组信息
 typedef struct {
 	uint8_t size;
-	group_channel_power_module_group_bind_info_t **group_channel_power_module_group_bind_info;
-} groups_channel_power_module_group_bind_info_t;
+	group_power_module_group_bind_info_t **group_power_module_group_bind_info;
+} groups_power_module_group_bind_info_t;
 
-static channel_power_module_group_bind_item_info_t channel_power_module_group_bind_item_info_0_0 = {
+static power_module_group_bind_node_t power_module_group_bind_node_0_0 = {
+	.id = 0,
 	.channel_id = 0,
 	.power_module_group_id = {0},
 };
 
-static channel_power_module_group_bind_item_info_t channel_power_module_group_bind_item_info_0_1 = {
+static power_module_group_bind_node_t power_module_group_bind_node_0_1 = {
+	.id = 1,
 	.channel_id = 1,
 	.power_module_group_id = {1},
 };
 
-static channel_power_module_group_bind_item_info_t channel_power_module_group_bind_item_info_0_2 = {
+static power_module_group_bind_node_t power_module_group_bind_node_0_2 = {
+	.id = 2,
 	.channel_id = 2,
 	.power_module_group_id = {2},
 };
 
-static channel_power_module_group_bind_item_info_t channel_power_module_group_bind_item_info_0_3 = {
+static power_module_group_bind_node_t power_module_group_bind_node_0_3 = {
+	.id = 3,
 	.channel_id = 3,
 	.power_module_group_id = {3},
 };
 
-static channel_power_module_group_bind_item_info_t channel_power_module_group_bind_item_info_0_4 = {
+static power_module_group_bind_node_t power_module_group_bind_node_0_4 = {
+	.id = 4,
 	.channel_id = 4,
 	.power_module_group_id = {4},
 };
 
-static channel_power_module_group_bind_item_info_t channel_power_module_group_bind_item_info_0_5 = {
+static power_module_group_bind_node_t power_module_group_bind_node_0_5 = {
+	.id = 5,
 	.channel_id = 5,
 	.power_module_group_id = {5},
 };
 
-static channel_power_module_group_bind_item_info_t *channel_power_module_group_bind_item_info_sz[] = {
-	&channel_power_module_group_bind_item_info_0_0,
-	&channel_power_module_group_bind_item_info_0_1,
-	&channel_power_module_group_bind_item_info_0_2,
-	&channel_power_module_group_bind_item_info_0_3,
-	&channel_power_module_group_bind_item_info_0_4,
-	&channel_power_module_group_bind_item_info_0_5,
+static power_module_group_bind_node_t *power_module_group_bind_node_sz[] = {
+	&power_module_group_bind_node_0_0,
+	&power_module_group_bind_node_0_1,
+	&power_module_group_bind_node_0_2,
+	&power_module_group_bind_node_0_3,
+	&power_module_group_bind_node_0_4,
+	&power_module_group_bind_node_0_5,
 };
 
-static group_channel_power_module_group_bind_info_t group_channel_power_module_group_bind_info_0 = {
+static group_power_module_group_bind_info_t group_power_module_group_bind_info_0 = {
 	.power_manager_group_id = 0,
-	.size = ARRAY_SIZE(channel_power_module_group_bind_item_info_sz),
-	.channel_power_module_group_bind_item_info = channel_power_module_group_bind_item_info_sz,
+	.size = ARRAY_SIZE(power_module_group_bind_node_sz),
+	.power_module_group_bind_node = power_module_group_bind_node_sz,
 };
 
-static group_channel_power_module_group_bind_info_t *group_channel_power_module_group_bind_info_sz[] = {
-	&group_channel_power_module_group_bind_info_0,
+static group_power_module_group_bind_info_t *group_power_module_group_bind_info_sz[] = {
+	&group_power_module_group_bind_info_0,
 };
 
-static groups_channel_power_module_group_bind_info_t groups_channel_power_module_group_bind_info = {
-	.size = ARRAY_SIZE(group_channel_power_module_group_bind_info_sz),
-	.group_channel_power_module_group_bind_info = group_channel_power_module_group_bind_info_sz,
+static groups_power_module_group_bind_info_t groups_power_module_group_bind_info = {
+	.size = ARRAY_SIZE(group_power_module_group_bind_info_sz),
+	.group_power_module_group_bind_info = group_power_module_group_bind_info_sz,
 };
 
-static channel_power_module_group_bind_item_info_t *get_channel_power_module_group_bind_item_info(uint8_t power_manager_group_id, uint8_t channel_id)
+
+static uint8_t get_power_module_group_bind_node_size(uint8_t power_manager_group_id)
 {
+	uint8_t size = 0;
+	group_power_module_group_bind_info_t *group_power_module_group_bind_info = NULL;
 	int i;
-	uint8_t found = 0;
-	channel_power_module_group_bind_item_info_t *channel_power_module_group_bind_item_info = NULL;
-	group_channel_power_module_group_bind_info_t *group_channel_power_module_group_bind_info = NULL;
 
-	for(i = 0; i < groups_channel_power_module_group_bind_info.size; i++) {
-		group_channel_power_module_group_bind_info_t *group_channel_power_module_group_bind_info_item = groups_channel_power_module_group_bind_info.group_channel_power_module_group_bind_info[i];
+	for(i = 0; i < groups_power_module_group_bind_info.size; i++) {
+		group_power_module_group_bind_info_t *group_power_module_group_bind_info_item = groups_power_module_group_bind_info.group_power_module_group_bind_info[i];
 
-		if(group_channel_power_module_group_bind_info_item->power_manager_group_id == power_manager_group_id) {
-			group_channel_power_module_group_bind_info = group_channel_power_module_group_bind_info_item;
-			found = 1;
+		if(group_power_module_group_bind_info_item->power_manager_group_id == power_manager_group_id) {
+			group_power_module_group_bind_info = group_power_module_group_bind_info_item;
 			break;
 		}
 	}
 
-	if(found == 0) {
-		return channel_power_module_group_bind_item_info;
+	if(group_power_module_group_bind_info == NULL) {
+		return size;
 	}
 
-	found = 0;
+	size = group_power_module_group_bind_info->size;
 
-	for(i = 0; i < group_channel_power_module_group_bind_info->size; i++) {
-		channel_power_module_group_bind_item_info_t *channel_power_module_group_bind_item_info_item = group_channel_power_module_group_bind_info->channel_power_module_group_bind_item_info[i];
-
-		if(channel_power_module_group_bind_item_info_item->channel_id == channel_id) {
-			channel_power_module_group_bind_item_info = channel_power_module_group_bind_item_info_item;
-			found = 1;
-			break;
-		}
-	}
-
-	return channel_power_module_group_bind_item_info;
+	return size;
 }
 
+static power_module_group_bind_node_t *get_power_module_group_bind_node_by_id(uint8_t power_manager_group_id, uint8_t id)
+{
+	int i;
+	power_module_group_bind_node_t *power_module_group_bind_node = NULL;
+	group_power_module_group_bind_info_t *group_power_module_group_bind_info = NULL;
+
+	for(i = 0; i < groups_power_module_group_bind_info.size; i++) {
+		group_power_module_group_bind_info_t *group_power_module_group_bind_info_item = groups_power_module_group_bind_info.group_power_module_group_bind_info[i];
+
+		if(group_power_module_group_bind_info_item->power_manager_group_id == power_manager_group_id) {
+			group_power_module_group_bind_info = group_power_module_group_bind_info_item;
+			break;
+		}
+	}
+
+	if(group_power_module_group_bind_info == NULL) {
+		return power_module_group_bind_node;
+	}
+
+	for(i = 0; i < group_power_module_group_bind_info->size; i++) {
+		power_module_group_bind_node_t *power_module_group_bind_node_item = group_power_module_group_bind_info->power_module_group_bind_node[i];
+
+		if(power_module_group_bind_node_item->id == id) {
+			power_module_group_bind_node = power_module_group_bind_node_item;
+			break;
+		}
+	}
+
+	return power_module_group_bind_node;
+}
+
+static power_module_group_bind_node_t *get_power_module_group_bind_node_by_channel_id(uint8_t power_manager_group_id, uint8_t channel_id)
+{
+	int i;
+	power_module_group_bind_node_t *power_module_group_bind_node = NULL;
+	group_power_module_group_bind_info_t *group_power_module_group_bind_info = NULL;
+
+	for(i = 0; i < groups_power_module_group_bind_info.size; i++) {
+		group_power_module_group_bind_info_t *group_power_module_group_bind_info_item = groups_power_module_group_bind_info.group_power_module_group_bind_info[i];
+
+		if(group_power_module_group_bind_info_item->power_manager_group_id == power_manager_group_id) {
+			group_power_module_group_bind_info = group_power_module_group_bind_info_item;
+			break;
+		}
+	}
+
+	if(group_power_module_group_bind_info == NULL) {
+		return power_module_group_bind_node;
+	}
+
+	for(i = 0; i < group_power_module_group_bind_info->size; i++) {
+		power_module_group_bind_node_t *power_module_group_bind_node_item = group_power_module_group_bind_info->power_module_group_bind_node[i];
+
+		if(power_module_group_bind_node_item->channel_id == channel_id) {
+			power_module_group_bind_node = power_module_group_bind_node_item;
+			break;
+		}
+	}
+
+	return power_module_group_bind_node;
+}
 
 typedef struct {
 	uint8_t channel_id;
@@ -488,13 +545,13 @@ static void clean_up_relay_map(power_manager_group_info_t *power_manager_group_i
 	}
 }
 
-static void action_relay_map(power_manager_group_info_t *power_manager_group_info)
+static int action_relay_map(power_manager_group_info_t *power_manager_group_info)
 {
+	int ret = 0;
 	int i;
 	power_manager_info_t *power_manager_info = (power_manager_info_t *)power_manager_group_info->power_manager_info;
 	power_manager_group_policy_ctx_t *power_manager_group_policy_ctx = (power_manager_group_policy_ctx_t *)power_manager_info->power_manager_group_policy_ctx + power_manager_group_info->id;
 	bitmap_t *relay_map = power_manager_group_policy_ctx->relay_map;
-	uint8_t fault = 0;
 
 	for(i = 0; i < relay_map->size; i++) {
 		relay_node_info_t *relay_node_info = get_relay_node_info_by_relay_id(power_manager_group_info->id, i);
@@ -516,12 +573,13 @@ static void action_relay_map(power_manager_group_info_t *power_manager_group_inf
 		}
 
 		if(HAL_GPIO_ReadPin(relay_node_info->gpio_port_fb, relay_node_info->gpio_pin_fb) != state) {
-			fault = 1;
+			debug("relay %d state %d", relay_node_info->relay_id, state);
+			ret = -1;
 			break;
 		}
 	}
 
-	set_fault(power_manager_group_info->faults, POWER_MANAGER_GROUP_FAULT_RELAY, fault);
+	return ret;
 }
 
 static int init_average(void *_power_manager_info)
@@ -629,14 +687,14 @@ static void free_power_module_group_for_stop_channel(power_manager_group_info_t 
 	}
 }
 
-static void channel_info_deactive_unneeded_power_module_group_average(power_manager_channel_info_t *power_manager_channel_info)//POWER_MODULE_POLICY_PRIORITY
+static void channel_info_deactive_unneeded_power_module_group_average(power_manager_channel_info_t *power_manager_channel_info)//只保留通道绑定的模块组
 {
 	struct list_head *pos;
 	struct list_head *n;
 	struct list_head *head;
 	struct list_head list_unneeded_power_module_group = LIST_HEAD_INIT(list_unneeded_power_module_group);
 	power_manager_group_info_t *power_manager_group_info = power_manager_channel_info->power_manager_group_info;
-	channel_power_module_group_bind_item_info_t *channel_power_module_group_bind_item_info;
+	power_module_group_bind_node_t *power_module_group_bind_node;
 	int i;
 
 	head = &power_manager_channel_info->power_module_group_list;
@@ -647,10 +705,11 @@ static void channel_info_deactive_unneeded_power_module_group_average(power_mana
 	}
 
 	//恢复该枪独占的模块组
-	channel_power_module_group_bind_item_info = get_channel_power_module_group_bind_item_info(power_manager_group_info->id, power_manager_channel_info->id);
+	power_module_group_bind_node = get_power_module_group_bind_node_by_channel_id(power_manager_group_info->id, power_manager_channel_info->id);
+	OS_ASSERT(power_module_group_bind_node != NULL);
 
-	for(i = 0; i < ARRAY_SIZE(channel_power_module_group_bind_item_info->power_module_group_id); i++) {
-		power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + channel_power_module_group_bind_item_info->power_module_group_id[i];
+	for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node->power_module_group_id); i++) {
+		power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node->power_module_group_id[i];
 
 		if(list_contain(&power_module_group_info->list, &list_unneeded_power_module_group) == 0) {
 			//恢复模块归属
@@ -675,7 +734,7 @@ static void channel_info_deactive_unneeded_power_module_group_average(power_mana
 }
 
 
-static void free_power_module_group_for_active_channel_average(power_manager_group_info_t *power_manager_group_info)//POWER_MODULE_POLICY_PRIORITY
+static void free_power_module_group_for_active_channel_average(power_manager_group_info_t *power_manager_group_info)//活动的通道只保留绑定模块组
 {
 	power_manager_channel_info_t *power_manager_channel_info;
 	struct list_head *head;
@@ -704,24 +763,24 @@ static int free_average(void *_power_manager_group_info)
 	return ret;
 }
 
-static void channel_info_assign_one_power_module_group_agerage(power_manager_channel_info_t *power_manager_channel_info)
+static void channel_info_assign_one_power_module_group_average(power_manager_channel_info_t *power_manager_channel_info)
 {
 	power_manager_group_info_t *power_manager_group_info = (power_manager_group_info_t *)power_manager_channel_info->power_manager_group_info;
 	power_manager_info_t *power_manager_info = (power_manager_info_t *)power_manager_group_info->power_manager_info;
 	power_manager_group_policy_ctx_t *power_manager_group_policy_ctx = (power_manager_group_policy_ctx_t *)power_manager_info->power_manager_group_policy_ctx + power_manager_group_info->id;
-	channels_info_t *channels_info = power_manager_info->channels_info;
 	struct list_head *head;
-	power_manager_channel_info_t *power_manager_channel_info_item;
-	power_manager_channel_info_t *power_manager_channel_info_item_prev;
-	channel_power_module_group_bind_item_info_t *channel_power_module_group_bind_item_info;
+	power_module_group_bind_node_t *power_module_group_bind_node;
+	power_module_group_bind_node_t *power_module_group_bind_node_item_next;
+	power_module_group_bind_node_t *power_module_group_bind_node_item_prev;
 	int i;
 	uint8_t assigned;
+	uint8_t bind_node_size = get_power_module_group_bind_node_size(power_manager_group_info->id);
 
 	//恢复该枪独占的模块组
-	channel_power_module_group_bind_item_info = get_channel_power_module_group_bind_item_info(power_manager_group_info->id, power_manager_channel_info->id);
+	power_module_group_bind_node = get_power_module_group_bind_node_by_channel_id(power_manager_group_info->id, power_manager_channel_info->id);
 
-	for(i = 0; i < ARRAY_SIZE(channel_power_module_group_bind_item_info->power_module_group_id); i++) {
-		power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + channel_power_module_group_bind_item_info->power_module_group_id[i];
+	for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node->power_module_group_id); i++) {
+		power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node->power_module_group_id[i];
 
 		if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {
 			power_module_item_info_t *power_module_item_info;
@@ -741,125 +800,161 @@ static void channel_info_assign_one_power_module_group_agerage(power_manager_cha
 	}
 
 	//left search
-	power_manager_channel_info_item_prev = power_manager_channel_info;
-	power_manager_channel_info_item = power_manager_channel_info;
+	power_module_group_bind_node_item_prev = power_module_group_bind_node;
+	power_module_group_bind_node_item_next = power_module_group_bind_node;
 
 	while(1) {
-		uint8_t next_channel_id;
+		uint8_t next_id;
 		relay_node_info_t *relay_node_info;
+		uint8_t power_module_group_bind_node_unavailable = 0;
 
-		if(power_manager_channel_info_item->id == 0) {
-			next_channel_id = channels_info->channel_number - 1;
+		if(power_module_group_bind_node_item_prev->id == 0) {
+			next_id = bind_node_size - 1;
 		} else {
-			next_channel_id = power_manager_channel_info_item->id - 1;
+			next_id = power_module_group_bind_node_item_prev->id - 1;
 		}
 
-		power_manager_channel_info_item = power_manager_info->power_manager_channel_info + next_channel_id;
+		power_module_group_bind_node_item_next = get_power_module_group_bind_node_by_id(power_manager_group_info->id, next_id);
+		OS_ASSERT(power_module_group_bind_node_item_next != NULL);
 
-		if(power_manager_channel_info_item->power_manager_group_info != power_manager_group_info) {
-			continue;
+		if(power_module_group_bind_node_item_next->channel_id == 0xff) {//纯功率节点
+			//节点绑定的模块组中都未在使用中
+			for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+				power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
+
+				if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
+					continue;
+				}
+
+				//不使用有故障的模块
+				//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
+				//	continue;
+				//}
+
+				power_module_group_bind_node_unavailable = 1;
+				break;
+			}
+		} else {//通道绑定节点
+			//节点绑定的通道未在使用中
+			power_manager_channel_info_t *power_manager_channel_info_item = power_manager_info->power_manager_channel_info + power_module_group_bind_node_item_next->channel_id;
+
+			if(list_contain(&power_manager_channel_info_item->list, &power_manager_group_info->channel_active_list) == 0) {//通道使用中
+				break;
+			}
 		}
 
-		if(list_contain(&power_manager_channel_info_item->list, &power_manager_group_info->channel_active_list) == 0) {
+		if(power_module_group_bind_node_unavailable == 1) {
 			break;
 		}
 
-		channel_power_module_group_bind_item_info = get_channel_power_module_group_bind_item_info(power_manager_group_info->id, power_manager_channel_info_item->id);
-
-		for(i = 0; i < ARRAY_SIZE(channel_power_module_group_bind_item_info->power_module_group_id); i++) {
-			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + channel_power_module_group_bind_item_info->power_module_group_id[i];
-
-			//当前模块组在空闲列表
-			if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {
-				power_module_item_info_t *power_module_item_info;
-				assigned = 1;
-				head = &power_module_group_info->power_module_item_list;
-				list_for_each_entry(power_module_item_info, head, power_module_item_info_t, list) {
-					if(power_module_item_info->status.state != POWER_MODULE_ITEM_STATE_IDLE) {
-						debug("power module state is not idle:%s!!!", get_power_module_item_state_des(power_module_item_info->status.state));
-					}
-
-					power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_ACTIVE;
+		for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
+			power_module_item_info_t *power_module_item_info;
+			assigned = 1;
+			head = &power_module_group_info->power_module_item_list;
+			list_for_each_entry(power_module_item_info, head, power_module_item_info_t, list) {
+				if(power_module_item_info->status.state != POWER_MODULE_ITEM_STATE_IDLE) {
+					debug("power module state is not idle:%s!!!", get_power_module_item_state_des(power_module_item_info->status.state));
 				}
-				power_module_group_info->power_manager_channel_info = power_manager_channel_info;
-				list_move_tail(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list);
-				debug("assign module group %d to channel %d", power_module_group_info->id, power_manager_channel_info->id);
 
-				//set relay power_manager_channel_info_item_prev---power_manager_channel_info_item, by id
-				relay_node_info = get_relay_node_info_by_channel_id(power_manager_group_info->id,
-				                  power_manager_channel_info_item_prev->id,
-				                  power_manager_channel_info_item->id);
-				OS_ASSERT(relay_node_info != NULL);
-				set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
+				power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_ACTIVE;
 			}
+			power_module_group_info->power_manager_channel_info = power_manager_channel_info;
+			list_move_tail(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list);
+			debug("assign module group %d to channel %d", power_module_group_info->id, power_manager_channel_info->id);
+
+			//set relay power_module_group_bind_node_item_prev---power_module_group_bind_node_item_next, by id
+			relay_node_info = get_relay_node_info_by_bind_node_id(power_manager_group_info->id,
+			                  power_module_group_bind_node_item_prev->id,
+			                  power_module_group_bind_node_item_next->id);
+			OS_ASSERT(relay_node_info != NULL);
+			set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
 		}
 
 		if(assigned != 0) {
 			return;
 		}
 
-		power_manager_channel_info_item_prev = power_manager_channel_info_item;
+		power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
 	}
 
 	//right search
-	power_manager_channel_info_item_prev = power_manager_channel_info;
-	power_manager_channel_info_item = power_manager_channel_info;
+	power_module_group_bind_node_item_prev = power_module_group_bind_node;
+	power_module_group_bind_node_item_next = power_module_group_bind_node;
 
 	while(1) {
-		uint8_t next_channel_id;
+		uint8_t next_id;
 		relay_node_info_t *relay_node_info;
+		uint8_t power_module_group_bind_node_unavailable = 0;
 
-		if(power_manager_channel_info_item->id == (channels_info->channel_number - 1)) {
-			next_channel_id = 0;
+		if(power_module_group_bind_node_item_prev->id >= (bind_node_size - 1)) {
+			next_id = 0;
 		} else {
-			next_channel_id = power_manager_channel_info_item->id + 1;
+			next_id = power_module_group_bind_node_item_prev->id + 1;
 		}
 
-		power_manager_channel_info_item = power_manager_info->power_manager_channel_info + next_channel_id;
+		power_module_group_bind_node_item_next = get_power_module_group_bind_node_by_id(power_manager_group_info->id, next_id);
+		OS_ASSERT(power_module_group_bind_node_item_next != NULL);
 
-		if(power_manager_channel_info_item->power_manager_group_info != power_manager_group_info) {
-			continue;
+		if(power_module_group_bind_node_item_next->channel_id == 0xff) {//纯功率节点
+			//节点绑定的模块组中都未在使用中
+			for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+				power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
+
+				if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
+					continue;
+				}
+
+				//不使用有故障的模块
+				//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
+				//	continue;
+				//}
+
+				power_module_group_bind_node_unavailable = 1;
+				break;
+			}
+		} else {//通道绑定节点
+			//节点绑定的通道未在使用中
+			power_manager_channel_info_t *power_manager_channel_info_item = power_manager_info->power_manager_channel_info + power_module_group_bind_node_item_next->channel_id;
+
+			if(list_contain(&power_manager_channel_info_item->list, &power_manager_group_info->channel_active_list) == 0) {//通道使用中
+				break;
+			}
 		}
 
-		if(list_contain(&power_manager_channel_info_item->list, &power_manager_group_info->channel_active_list) == 0) {
+		if(power_module_group_bind_node_unavailable == 1) {
 			break;
 		}
 
-		channel_power_module_group_bind_item_info = get_channel_power_module_group_bind_item_info(power_manager_group_info->id, power_manager_channel_info_item->id);
-
-		for(i = 0; i < ARRAY_SIZE(channel_power_module_group_bind_item_info->power_module_group_id); i++) {
-			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + channel_power_module_group_bind_item_info->power_module_group_id[i];
-
-			//当前模块组在空闲列表
-			if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {
-				power_module_item_info_t *power_module_item_info;
-				assigned = 1;
-				head = &power_module_group_info->power_module_item_list;
-				list_for_each_entry(power_module_item_info, head, power_module_item_info_t, list) {
-					if(power_module_item_info->status.state != POWER_MODULE_ITEM_STATE_IDLE) {
-						debug("power module state is not idle:%s!!!", get_power_module_item_state_des(power_module_item_info->status.state));
-					}
-
-					power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_ACTIVE;
+		for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
+			power_module_item_info_t *power_module_item_info;
+			assigned = 1;
+			head = &power_module_group_info->power_module_item_list;
+			list_for_each_entry(power_module_item_info, head, power_module_item_info_t, list) {
+				if(power_module_item_info->status.state != POWER_MODULE_ITEM_STATE_IDLE) {
+					debug("power module state is not idle:%s!!!", get_power_module_item_state_des(power_module_item_info->status.state));
 				}
-				power_module_group_info->power_manager_channel_info = power_manager_channel_info;
-				list_move_tail(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list);
-				debug("assign module group %d to channel %d", power_module_group_info->id, power_manager_channel_info->id);
 
-				//set relay power_manager_channel_info_item_prev---power_manager_channel_info_item, by id
-				relay_node_info = get_relay_node_info_by_channel_id(power_manager_group_info->id,
-				                  power_manager_channel_info_item_prev->id,
-				                  power_manager_channel_info_item->id);
-				OS_ASSERT(relay_node_info != NULL);
-				set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
+				power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_ACTIVE;
 			}
+			power_module_group_info->power_manager_channel_info = power_manager_channel_info;
+			list_move_tail(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list);
+			debug("assign module group %d to channel %d", power_module_group_info->id, power_manager_channel_info->id);
+
+			//set relay power_module_group_bind_node_item_prev---power_module_group_bind_node_item_next, by id
+			relay_node_info = get_relay_node_info_by_bind_node_id(power_manager_group_info->id,
+			                  power_module_group_bind_node_item_prev->id,
+			                  power_module_group_bind_node_item_next->id);
+			OS_ASSERT(relay_node_info != NULL);
+			set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
 		}
 
 		if(assigned != 0) {
 			return;
 		}
 
-		power_manager_channel_info_item_prev = power_manager_channel_info_item;
+		power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
 	}
 }
 
@@ -872,7 +967,7 @@ static void active_power_manager_group_info_power_module_group_assign_average(po
 		head = &power_manager_group_info->channel_active_list;
 
 		list_for_each_entry(power_manager_channel_info, head, power_manager_channel_info_t, list) {
-			channel_info_assign_one_power_module_group_agerage(power_manager_channel_info);
+			channel_info_assign_one_power_module_group_average(power_manager_channel_info);
 		}
 	}
 }
@@ -1009,14 +1104,13 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 	power_manager_group_info_t *power_manager_group_info = power_manager_channel_info->power_manager_group_info;
 	power_manager_info_t *power_manager_info = (power_manager_info_t *)power_manager_group_info->power_manager_info;
 	power_manager_group_policy_ctx_t *power_manager_group_policy_ctx = (power_manager_group_policy_ctx_t *)power_manager_info->power_manager_group_policy_ctx + power_manager_group_info->id;
-	channels_info_t *channels_info = power_manager_info->channels_info;
 	struct list_head list_unneeded_power_module_group = LIST_HEAD_INIT(list_unneeded_power_module_group);
-	power_manager_channel_info_t *power_manager_channel_info_item;
-	power_manager_channel_info_t *power_manager_channel_info_item_prev;
-	uint8_t assigned;
-	channel_power_module_group_bind_item_info_t *channel_power_module_group_bind_item_info;
-	//channel_relay_fb_node_info_t *channel_relay_fb_node_info;
+	power_module_group_bind_node_t *power_module_group_bind_node;
+	power_module_group_bind_node_t *power_module_group_bind_node_item_next;
+	power_module_group_bind_node_t *power_module_group_bind_node_item_prev;
 	int i;
+	uint8_t assigned;
+	uint8_t bind_node_size = get_power_module_group_bind_node_size(power_manager_group_info->id);
 
 	head = &power_manager_channel_info->power_module_group_list;
 
@@ -1025,10 +1119,11 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 		list_move_tail(&power_module_group_info->list, &list_unneeded_power_module_group);
 	}
 
-	channel_power_module_group_bind_item_info = get_channel_power_module_group_bind_item_info(power_manager_group_info->id, power_manager_channel_info->id);
+	//恢复该枪独占的模块组
+	power_module_group_bind_node = get_power_module_group_bind_node_by_channel_id(power_manager_group_info->id, power_manager_channel_info->id);
 
-	for(i = 0; i < ARRAY_SIZE(channel_power_module_group_bind_item_info->power_module_group_id); i++) {
-		power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + channel_power_module_group_bind_item_info->power_module_group_id[i];
+	for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node->power_module_group_id); i++) {
+		power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node->power_module_group_id[i];
 
 		if(list_contain(&power_module_group_info->list, &list_unneeded_power_module_group) == 0) {
 			//恢复模块归属
@@ -1045,12 +1140,13 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 	}
 
 	//left search
-	power_manager_channel_info_item_prev = power_manager_channel_info;
-	power_manager_channel_info_item = power_manager_channel_info;
+	power_module_group_bind_node_item_prev = power_module_group_bind_node;
+	power_module_group_bind_node_item_next = power_module_group_bind_node;
 
 	while(1) {
-		uint8_t next_channel_id;
+		uint8_t next_id;
 		relay_node_info_t *relay_node_info;
+		uint8_t power_module_group_bind_node_unavailable = 0;
 
 		assigned = list_size(&power_manager_channel_info->power_module_group_list);
 
@@ -1059,63 +1155,82 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 			goto exit;
 		}
 
-		if(power_manager_channel_info_item->id == 0) {
-			next_channel_id = channels_info->channel_number - 1;
+		if(power_module_group_bind_node_item_prev->id == 0) {
+			next_id = bind_node_size - 1;
 		} else {
-			next_channel_id = power_manager_channel_info_item->id - 1;
+			next_id = power_module_group_bind_node_item_prev->id - 1;
 		}
 
-		power_manager_channel_info_item = power_manager_info->power_manager_channel_info + next_channel_id;
+		power_module_group_bind_node_item_next = get_power_module_group_bind_node_by_id(power_manager_group_info->id, next_id);
+		OS_ASSERT(power_module_group_bind_node_item_next != NULL);
 
-		if(power_manager_channel_info_item->power_manager_group_info != power_manager_group_info) {
-			continue;
+		if(power_module_group_bind_node_item_next->channel_id == 0xff) {//纯功率节点
+			//节点绑定的模块组中都未在使用中
+			for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+				power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
+
+				if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
+					continue;
+				}
+
+				//不使用有故障的模块
+				//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
+				//	continue;
+				//}
+
+				power_module_group_bind_node_unavailable = 1;
+				break;
+			}
+		} else {//通道绑定节点
+			//节点绑定的通道未在使用中
+			power_manager_channel_info_t *power_manager_channel_info_item = power_manager_info->power_manager_channel_info + power_module_group_bind_node_item_next->channel_id;
+
+			if(list_contain(&power_manager_channel_info_item->list, &power_manager_group_info->channel_active_list) == 0) {//通道使用中
+				break;
+			}
 		}
 
-		if(list_contain(&power_manager_channel_info_item->list, &power_manager_group_info->channel_active_list) == 0) {
+		if(power_module_group_bind_node_unavailable == 1) {
 			break;
 		}
 
-		//确保该模块组绑定的通道必须断开输出
-		//channel_relay_fb_node_info = get_channel_relay_fb_node_info(power_manager_group_info->power_manager_group_id, power_manager_channel_info_item->id);
-		//OS_ASSERT(channel_relay_fb_node_info != NULL);
+		power_module_group_bind_node_unavailable = 1;
 
-		//while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
-		//	debug("channel %d fb error!", channel_relay_fb_node_info->id);
-		//}
-
-
-		channel_power_module_group_bind_item_info = get_channel_power_module_group_bind_item_info(power_manager_group_info->id, power_manager_channel_info_item->id);
-
-		for(i = 0; i < ARRAY_SIZE(channel_power_module_group_bind_item_info->power_module_group_id); i++) {
-			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + channel_power_module_group_bind_item_info->power_module_group_id[i];
+		for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
 
 			if(list_contain(&power_module_group_info->list, &list_unneeded_power_module_group) == 0) {
 				list_move_tail(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list);
 
 				debug("restore power module group %d to channel %d", power_module_group_info->id, power_manager_channel_info->id);
 
-				//set relay power_manager_channel_info_item_prev---power_manager_channel_info_item, by id
-				relay_node_info = get_relay_node_info_by_channel_id(power_manager_group_info->id,
-				                  power_manager_channel_info_item_prev->id,
-				                  power_manager_channel_info_item->id);
-				OS_ASSERT(relay_node_info != NULL);
-				set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
-			} else {
-				debug("power module group %d not in channel %d", power_module_group_info->id, power_manager_channel_info->id);
-				break;
+				power_module_group_bind_node_unavailable = 0;
+
 			}
 		}
 
-		power_manager_channel_info_item_prev = power_manager_channel_info_item;
+		if(power_module_group_bind_node_unavailable == 1) {
+			break;
+		}
+
+		//set relay power_module_group_bind_node_item_prev---power_module_group_bind_node_item_next, by id
+		relay_node_info = get_relay_node_info_by_bind_node_id(power_manager_group_info->id,
+		                  power_module_group_bind_node_item_prev->id,
+		                  power_module_group_bind_node_item_next->id);
+		OS_ASSERT(relay_node_info != NULL);
+		set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
+
+		power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
 	}
 
 	//right search
-	power_manager_channel_info_item_prev = power_manager_channel_info;
-	power_manager_channel_info_item = power_manager_channel_info;
+	power_module_group_bind_node_item_prev = power_module_group_bind_node;
+	power_module_group_bind_node_item_next = power_module_group_bind_node;
 
 	while(1) {
-		uint8_t next_channel_id;
+		uint8_t next_id;
 		relay_node_info_t *relay_node_info;
+		uint8_t power_module_group_bind_node_unavailable = 0;
 
 		assigned = list_size(&power_manager_channel_info->power_module_group_list);
 
@@ -1124,52 +1239,72 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 			goto exit;
 		}
 
-		if(power_manager_channel_info_item->id == (channels_info->channel_number - 1)) {
-			next_channel_id = 0;
+		if(power_module_group_bind_node_item_prev->id >= (bind_node_size - 1)) {
+			next_id = 0;
 		} else {
-			next_channel_id = power_manager_channel_info_item->id + 1;
+			next_id = power_module_group_bind_node_item_prev->id + 1;
 		}
 
-		power_manager_channel_info_item = power_manager_info->power_manager_channel_info + next_channel_id;
+		power_module_group_bind_node_item_next = get_power_module_group_bind_node_by_id(power_manager_group_info->id, next_id);
+		OS_ASSERT(power_module_group_bind_node_item_next != NULL);
 
-		if(power_manager_channel_info_item->power_manager_group_info != power_manager_group_info) {
-			continue;
-		}
+		if(power_module_group_bind_node_item_next->channel_id == 0xff) {//纯功率节点
+			//节点绑定的模块组中都未在使用中
+			for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+				power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
 
-		if(list_contain(&power_manager_channel_info_item->list, &power_manager_group_info->channel_active_list) == 0) {
-			break;
-		}
+				if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
+					continue;
+				}
 
-		//确保该模块组绑定的通道必须断开输出
-		//channel_relay_fb_node_info = get_channel_relay_fb_node_info(channels_config, power_manager_group_info->power_manager_group_id, power_manager_channel_info_item->id);
-		//OS_ASSERT(channel_relay_fb_node_info != NULL);
+				//不使用有故障的模块
+				//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
+				//	continue;
+				//}
 
-		//while(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
-		//	debug("channel %d fb error!", channel_relay_fb_node_info->channel_id);
-		//}
+				power_module_group_bind_node_unavailable = 1;
+				break;
+			}
+		} else {//通道绑定节点
+			//节点绑定的通道未在使用中
+			power_manager_channel_info_t *power_manager_channel_info_item = power_manager_info->power_manager_channel_info + power_module_group_bind_node_item_next->channel_id;
 
-		channel_power_module_group_bind_item_info = get_channel_power_module_group_bind_item_info(power_manager_group_info->id, power_manager_channel_info_item->id);
-
-		for(i = 0; i < ARRAY_SIZE(channel_power_module_group_bind_item_info->power_module_group_id); i++) {
-			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + channel_power_module_group_bind_item_info->power_module_group_id[i];
-
-			if(list_contain(&power_module_group_info->list, &list_unneeded_power_module_group) == 0) {
-				list_move_tail(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list);
-				debug("restore power module group %d to channel %d", power_module_group_info->id, power_manager_channel_info->id);
-
-				//set relay power_manager_channel_info_item_prev---power_manager_channel_info_item, by id
-				relay_node_info = get_relay_node_info_by_channel_id(power_manager_group_info->id,
-				                  power_manager_channel_info_item_prev->id,
-				                  power_manager_channel_info_item->id);
-				OS_ASSERT(relay_node_info != NULL);
-				set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
-			} else {
-				debug("power module group %d not in channel %d", power_module_group_info->id, power_manager_channel_info->id);
+			if(list_contain(&power_manager_channel_info_item->list, &power_manager_group_info->channel_active_list) == 0) {//通道使用中
 				break;
 			}
 		}
 
-		power_manager_channel_info_item_prev = power_manager_channel_info_item;
+		if(power_module_group_bind_node_unavailable == 1) {
+			break;
+		}
+
+		power_module_group_bind_node_unavailable = 1;
+
+		for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
+
+			if(list_contain(&power_module_group_info->list, &list_unneeded_power_module_group) == 0) {
+				list_move_tail(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list);
+
+				debug("restore power module group %d to channel %d", power_module_group_info->id, power_manager_channel_info->id);
+
+				power_module_group_bind_node_unavailable = 0;
+
+			}
+		}
+
+		if(power_module_group_bind_node_unavailable == 1) {
+			break;
+		}
+
+		//set relay power_module_group_bind_node_item_prev---power_module_group_bind_node_item_next, by id
+		relay_node_info = get_relay_node_info_by_bind_node_id(power_manager_group_info->id,
+		                  power_module_group_bind_node_item_prev->id,
+		                  power_module_group_bind_node_item_next->id);
+		OS_ASSERT(relay_node_info != NULL);
+		set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
+
+		power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
 	}
 
 exit:
@@ -1223,19 +1358,19 @@ static void channel_info_assign_power_module_group_priority(power_manager_channe
 	power_manager_group_info_t *power_manager_group_info = (power_manager_group_info_t *)power_manager_channel_info->power_manager_group_info;
 	power_manager_info_t *power_manager_info = (power_manager_info_t *)power_manager_group_info->power_manager_info;
 	power_manager_group_policy_ctx_t *power_manager_group_policy_ctx = (power_manager_group_policy_ctx_t *)power_manager_info->power_manager_group_policy_ctx + power_manager_group_info->id;
-	channels_info_t *channels_info = power_manager_info->channels_info;
 	struct list_head *head;
-	power_manager_channel_info_t *power_manager_channel_info_item;
-	power_manager_channel_info_t *power_manager_channel_info_item_prev;
-	channel_power_module_group_bind_item_info_t *channel_power_module_group_bind_item_info;
+	power_module_group_bind_node_t *power_module_group_bind_node;
+	power_module_group_bind_node_t *power_module_group_bind_node_item_next;
+	power_module_group_bind_node_t *power_module_group_bind_node_item_prev;
 	int i;
 	uint8_t assigned;
+	uint8_t bind_node_size = get_power_module_group_bind_node_size(power_manager_group_info->id);
 
 	//恢复该枪独占的模块组
-	channel_power_module_group_bind_item_info = get_channel_power_module_group_bind_item_info(power_manager_group_info->id, power_manager_channel_info->id);
+	power_module_group_bind_node = get_power_module_group_bind_node_by_channel_id(power_manager_group_info->id, power_manager_channel_info->id);
 
-	for(i = 0; i < ARRAY_SIZE(channel_power_module_group_bind_item_info->power_module_group_id); i++) {
-		power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + channel_power_module_group_bind_item_info->power_module_group_id[i];
+	for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node->power_module_group_id); i++) {
+		power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node->power_module_group_id[i];
 
 		if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {
 			power_module_item_info_t *power_module_item_info;
@@ -1262,33 +1397,62 @@ static void channel_info_assign_power_module_group_priority(power_manager_channe
 	}
 
 	//left search
-	power_manager_channel_info_item_prev = power_manager_channel_info;
-	power_manager_channel_info_item = power_manager_channel_info;
+	power_module_group_bind_node_item_prev = power_module_group_bind_node;
+	power_module_group_bind_node_item_next = power_module_group_bind_node;
 
 	while(1) {
-		uint8_t next_channel_id;
+		uint8_t next_id;
 		relay_node_info_t *relay_node_info;
+		uint8_t power_module_group_bind_node_unavailable = 0;
 
-		if(power_manager_channel_info_item->id == 0) {
-			next_channel_id = channels_info->channel_number - 1;
+		assigned = list_size(&power_manager_channel_info->power_module_group_list);
+
+		if(assigned >= power_manager_channel_info->status.reassign_power_module_group_number) {
+			debug("channel %d reassign_module_group_number:%d, assigned:%d", power_manager_channel_info->id, power_manager_channel_info->status.reassign_power_module_group_number, assigned);
+			return;
+		}
+
+		if(power_module_group_bind_node_item_prev->id == 0) {
+			next_id = bind_node_size - 1;
 		} else {
-			next_channel_id = power_manager_channel_info_item->id - 1;
+			next_id = power_module_group_bind_node_item_prev->id - 1;
 		}
 
-		power_manager_channel_info_item = power_manager_info->power_manager_channel_info + next_channel_id;
+		power_module_group_bind_node_item_next = get_power_module_group_bind_node_by_id(power_manager_group_info->id, next_id);
+		OS_ASSERT(power_module_group_bind_node_item_next != NULL);
 
-		if(power_manager_channel_info_item->power_manager_group_info != power_manager_group_info) {
-			continue;
+		if(power_module_group_bind_node_item_next->channel_id == 0xff) {//纯功率节点
+			//节点绑定的模块组中都未在使用中
+			for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+				power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
+
+				if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
+					continue;
+				}
+
+				//不使用有故障的模块
+				//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
+				//	continue;
+				//}
+
+				power_module_group_bind_node_unavailable = 1;
+				break;
+			}
+		} else {//通道绑定节点
+			//节点绑定的通道未在使用中
+			power_manager_channel_info_t *power_manager_channel_info_item = power_manager_info->power_manager_channel_info + power_module_group_bind_node_item_next->channel_id;
+
+			if(list_contain(&power_manager_channel_info_item->list, &power_manager_group_info->channel_active_list) == 0) {//通道使用中
+				break;
+			}
 		}
 
-		if(list_contain(&power_manager_channel_info_item->list, &power_manager_group_info->channel_active_list) == 0) {
+		if(power_module_group_bind_node_unavailable == 1) {
 			break;
 		}
 
-		channel_power_module_group_bind_item_info = get_channel_power_module_group_bind_item_info(power_manager_group_info->id, power_manager_channel_info_item->id);
-
-		for(i = 0; i < ARRAY_SIZE(channel_power_module_group_bind_item_info->power_module_group_id); i++) {
-			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + channel_power_module_group_bind_item_info->power_module_group_id[i];
+		for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
 
 			//当前模块组在空闲列表
 			if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {
@@ -1305,53 +1469,75 @@ static void channel_info_assign_power_module_group_priority(power_manager_channe
 				list_move_tail(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list);
 				debug("assign module group %d to channel %d", power_module_group_info->id, power_manager_channel_info->id);
 
-				//set relay power_manager_channel_info_item_prev---power_manager_channel_info_item, by id
-				relay_node_info = get_relay_node_info_by_channel_id(power_manager_group_info->id,
-				                  power_manager_channel_info_item_prev->id,
-				                  power_manager_channel_info_item->id);
+				//set relay power_module_group_bind_node_item_prev---power_module_group_bind_node_item_next, by id
+				relay_node_info = get_relay_node_info_by_bind_node_id(power_manager_group_info->id,
+				                  power_module_group_bind_node_item_prev->id,
+				                  power_module_group_bind_node_item_next->id);
 				OS_ASSERT(relay_node_info != NULL);
 				set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
 			}
 		}
 
-		assigned = list_size(&power_manager_channel_info->power_module_group_list);
-
-		if(assigned >= power_manager_channel_info->status.reassign_power_module_group_number) {
-			debug("channel %d reassign_module_group_number:%d, assigned:%d", power_manager_channel_info->id, power_manager_channel_info->status.reassign_power_module_group_number, assigned);
-			return;
-		}
-
-		power_manager_channel_info_item_prev = power_manager_channel_info_item;
+		power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
 	}
 
 	//right search
-	power_manager_channel_info_item_prev = power_manager_channel_info;
-	power_manager_channel_info_item = power_manager_channel_info;
+	power_module_group_bind_node_item_prev = power_module_group_bind_node;
+	power_module_group_bind_node_item_next = power_module_group_bind_node;
 
 	while(1) {
-		uint8_t next_channel_id;
+		uint8_t next_id;
 		relay_node_info_t *relay_node_info;
+		uint8_t power_module_group_bind_node_unavailable = 0;
 
-		if(power_manager_channel_info_item->id == (channels_info->channel_number - 1)) {
-			next_channel_id = 0;
+		assigned = list_size(&power_manager_channel_info->power_module_group_list);
+
+		if(assigned >= power_manager_channel_info->status.reassign_power_module_group_number) {
+			debug("channel %d reassign_module_group_number:%d, assigned:%d", power_manager_channel_info->id, power_manager_channel_info->status.reassign_power_module_group_number, assigned);
+			return;
+		}
+
+		if(power_module_group_bind_node_item_prev->id >= (bind_node_size - 1)) {
+			next_id = 0;
 		} else {
-			next_channel_id = power_manager_channel_info_item->id + 1;
+			next_id = power_module_group_bind_node_item_prev->id + 1;
 		}
 
-		power_manager_channel_info_item = power_manager_info->power_manager_channel_info + next_channel_id;
+		power_module_group_bind_node_item_next = get_power_module_group_bind_node_by_id(power_manager_group_info->id, next_id);
+		OS_ASSERT(power_module_group_bind_node_item_next != NULL);
 
-		if(power_manager_channel_info_item->power_manager_group_info != power_manager_group_info) {
-			continue;
+		if(power_module_group_bind_node_item_next->channel_id == 0xff) {//纯功率节点
+			//节点绑定的模块组中都未在使用中
+			for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+				power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
+
+				if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {//空闲
+					continue;
+				}
+
+				//不使用有故障的模块
+				//if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_disable_list) == 0) {//禁用
+				//	continue;
+				//}
+
+				power_module_group_bind_node_unavailable = 1;
+				break;
+			}
+		} else {//通道绑定节点
+			//节点绑定的通道未在使用中
+			power_manager_channel_info_t *power_manager_channel_info_item = power_manager_info->power_manager_channel_info + power_module_group_bind_node_item_next->channel_id;
+
+			if(list_contain(&power_manager_channel_info_item->list, &power_manager_group_info->channel_active_list) == 0) {//通道使用中
+				break;
+			}
 		}
 
-		if(list_contain(&power_manager_channel_info_item->list, &power_manager_group_info->channel_active_list) == 0) {
+		if(power_module_group_bind_node_unavailable == 1) {
 			break;
 		}
 
-		channel_power_module_group_bind_item_info = get_channel_power_module_group_bind_item_info(power_manager_group_info->id, power_manager_channel_info_item->id);
-
-		for(i = 0; i < ARRAY_SIZE(channel_power_module_group_bind_item_info->power_module_group_id); i++) {
-			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + channel_power_module_group_bind_item_info->power_module_group_id[i];
+		for(i = 0; i < ARRAY_SIZE(power_module_group_bind_node_item_next->power_module_group_id); i++) {
+			power_module_group_info_t *power_module_group_info = power_manager_group_info->power_module_group_info + power_module_group_bind_node_item_next->power_module_group_id[i];
 
 			//当前模块组在空闲列表
 			if(list_contain(&power_module_group_info->list, &power_manager_group_info->power_module_group_idle_list) == 0) {
@@ -1368,23 +1554,16 @@ static void channel_info_assign_power_module_group_priority(power_manager_channe
 				list_move_tail(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list);
 				debug("assign module group %d to channel %d", power_module_group_info->id, power_manager_channel_info->id);
 
-				//set relay power_manager_channel_info_item_prev---power_manager_channel_info_item, by id
-				relay_node_info = get_relay_node_info_by_channel_id(power_manager_group_info->id,
-				                  power_manager_channel_info_item_prev->id,
-				                  power_manager_channel_info_item->id);
+				//set relay power_module_group_bind_node_item_prev---power_module_group_bind_node_item_next, by id
+				relay_node_info = get_relay_node_info_by_bind_node_id(power_manager_group_info->id,
+				                  power_module_group_bind_node_item_prev->id,
+				                  power_module_group_bind_node_item_next->id);
 				OS_ASSERT(relay_node_info != NULL);
 				set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
 			}
 		}
 
-		assigned = list_size(&power_manager_channel_info->power_module_group_list);
-
-		if(assigned >= power_manager_channel_info->status.reassign_power_module_group_number) {
-			debug("channel %d reassign_module_group_number:%d, assigned:%d", power_manager_channel_info->id, power_manager_channel_info->status.reassign_power_module_group_number, assigned);
-			return;
-		}
-
-		power_manager_channel_info_item_prev = power_manager_channel_info_item;
+		power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
 	}
 }
 
