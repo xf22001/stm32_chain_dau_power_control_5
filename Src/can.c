@@ -128,6 +128,8 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
   /* USER CODE BEGIN CAN1_MspInit 1 */
 
+    CLEAR_BIT(canHandle->Instance->MCR, CAN_MCR_SLEEP);
+
   /* USER CODE END CAN1_MspInit 1 */
   }
   else if(canHandle->Instance==CAN2)
@@ -160,6 +162,8 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     HAL_NVIC_SetPriority(CAN2_RX1_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(CAN2_RX1_IRQn);
   /* USER CODE BEGIN CAN2_MspInit 1 */
+
+    CLEAR_BIT(canHandle->Instance->MCR, CAN_MCR_SLEEP);
 
   /* USER CODE END CAN2_MspInit 1 */
   }

@@ -229,7 +229,7 @@ static int p_host(struct hostent *ent)
 static void get_host_by_name(char *content, uint32_t size)
 {
 	struct hostent *ent;
-	char *hostname = (char *)os_alloc(RECV_BUFFER_SIZE);
+	char *hostname = (char *)os_calloc(1, RECV_BUFFER_SIZE);
 	int ret;
 	int fn;
 	int catched;
@@ -265,6 +265,7 @@ static void fn4(request_t *request)
 }
 
 uint16_t osGetCPUUsage(void);
+int get_brk_size(void);
 static void fn5(request_t *request)
 {
 	int size = xPortGetFreeHeapSize();
@@ -280,6 +281,7 @@ static void fn5(request_t *request)
 
 	_printf("cpu usage:%d\n", cpu_usage);
 	_printf("free os heap size:%d\n", size);
+	_printf("brk size:%d\n", get_brk_size());
 	_printf("total heap size:%d, free heap size:%d, used:%d, heap count:%d, max heap size:%d\n",
 	        total_heap_size,
 	        total_heap_size - heap_size,
@@ -300,7 +302,7 @@ static void fn5(request_t *request)
 
 	size = 1024;
 
-	os_thread_info = (uint8_t *)os_alloc(size);
+	os_thread_info = (uint8_t *)os_calloc(1, size);
 
 	if(os_thread_info == NULL) {
 		return;
@@ -308,7 +310,15 @@ static void fn5(request_t *request)
 
 	osThreadList(os_thread_info);
 
+	_printf("%-15s\t%s\t%s\t%s\t%s\n", "name", "state", "prio", "stack", "no");
 	_puts((const char *)os_thread_info);
+
+	vTaskGetRunTimeStats((char *)os_thread_info);
+
+	_printf("\n\n%-15s\t%s\t\t%s\n", "name", "count", "percent");
+	_puts((const char *)os_thread_info);
+
+	_printf("\n");
 
 	os_free(os_thread_info);
 

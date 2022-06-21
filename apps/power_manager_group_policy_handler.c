@@ -6,7 +6,7 @@
  *   文件名称：power_manager_group_policy_handler.c
  *   创 建 者：肖飞
  *   创建日期：2022年06月02日 星期四 16时27分25秒
- *   修改日期：2022年06月20日 星期一 13时57分01秒
+ *   修改日期：2022年06月21日 星期二 08时45分58秒
  *   描    述：
  *
  *================================================================*/
@@ -1690,14 +1690,14 @@ void power_manager_restore_config(channels_info_t *channels_info)
 	for(i = 0; i < power_manager_settings->power_manager_group_number; i++) {
 		power_manager_group_settings_t *power_manager_group_settings = &power_manager_settings->power_manager_group_settings[i];
 
-		power_manager_group_settings->channel_number = 5;
+		power_manager_group_settings->channel_number = 6;
 		power_manager_group_settings->relay_board_number_per_channel = 0;
 
 		for(j = 0; j < power_manager_group_settings->relay_board_number_per_channel; j++) {
 			power_manager_group_settings->slot_per_relay_board[j] = 6;
 		}
 
-		power_manager_group_settings->power_module_group_number = 5;
+		power_manager_group_settings->power_module_group_number = 6;
 
 		channels_info->channel_number += power_manager_group_settings->channel_number;
 
