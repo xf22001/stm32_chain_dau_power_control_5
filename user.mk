@@ -6,7 +6,7 @@
 #   文件名称：user.mk
 #   创 建 者：肖飞
 #   创建日期：2019年10月25日 星期五 13时04分38秒
-#   修改日期：2022年06月05日 星期日 11时48分52秒
+#   修改日期：2022年06月22日 星期三 11时38分08秒
 #   描    述：
 #
 #================================================================
@@ -59,7 +59,11 @@ ifneq ($(call ifdef_any_of,SAL_WIZNET),)
 USER_C_SOURCES += apps/wiznet_spi.c
 endif
 ifneq ($(call ifdef_any_of,CHARGER_CHANNEL_PROXY_REMOTE),)
+ifneq ($(call ifdef_any_of,PSEUDO_ENV),)
+USER_C_SOURCES += apps/channels_comm_proxy_remote_pseudo.c
+else
 USER_C_SOURCES += apps/channels_comm_proxy_remote.c
+endif
 endif
 
 USER_C_SOURCES += apps/modules/app/config_utils.c

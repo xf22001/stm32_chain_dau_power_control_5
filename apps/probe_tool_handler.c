@@ -6,7 +6,7 @@
  *   文件名称：probe_tool_handler.c
  *   创 建 者：肖飞
  *   创建日期：2020年03月20日 星期五 12时48分07秒
- *   修改日期：2022年06月02日 星期四 17时00分08秒
+ *   修改日期：2022年06月21日 星期二 12时13分44秒
  *   描    述：
  *
  *================================================================*/
@@ -438,6 +438,63 @@ static void fn11(request_t *request)
 	      modbus_data_ctx.value);
 }
 
+static void fn14(request_t *request)
+{
+	char *content = (char *)(request + 1);
+	int fn;
+	int channel_id;
+	int type;//channel_event_type_t
+	int catched;
+	int ret;
+
+	ret = sscanf(content, "%d %d %d %n",
+	             &fn,
+	             &channel_id,
+	             &type,
+	             &catched);
+	debug("ret:%d", ret);
+
+	if(ret == 3) {
+		channel_event_t *channel_event = os_calloc(1, sizeof(channel_event_t));
+		channels_event_t *channels_event = os_calloc(1, sizeof(channels_event_t));
+		channels_info_t *channels_info = get_channels();
+		channel_info_t *channel_info = channels_info->channel_info + channel_id;
+
+		OS_ASSERT(channel_event != NULL);
+		OS_ASSERT(channels_event != NULL);
+
+		switch(type) {
+			case CHANNEL_EVENT_TYPE_START_CHANNEL: {
+			}
+			break;
+
+			case CHANNEL_EVENT_TYPE_STOP_CHANNEL: {
+				channel_info->channel_event_stop.stop_reason = CHANNEL_RECORD_ITEM_STOP_REASON_MANUAL;
+			}
+			break;
+
+			default: {
+			}
+			break;
+		}
+
+		channel_event->channel_id = channel_id;
+		channel_event->type = type;
+		channel_event->ctx = &channel_info->channel_event_start_display;
+
+		channels_event->type = CHANNELS_EVENT_CHANNEL;
+		channels_event->event = channel_event;
+
+		if(send_channels_event(channels_info, channels_event, 100) != 0) {
+			os_free(channels_event->event);
+			os_free(channels_event);
+			debug("send channel %d type %d failed!", channel_id, type);
+		} else {
+			debug("send channel %d type %d successful!", channel_id, type);
+		}
+	}
+}
+
 static void fn17(request_t *request)
 {
 	char *content = (char *)(request + 1);
@@ -467,6 +524,7 @@ static server_item_t server_map[] = {
 	{9, fn9},
 	{10, fn10},
 	{11, fn11},
+	{14, fn14},
 	{17, fn17},
 };
 
