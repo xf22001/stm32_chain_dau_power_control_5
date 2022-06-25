@@ -6,7 +6,7 @@
  *   文件名称：modbus_addr_handler.c
  *   创 建 者：肖飞
  *   创建日期：2020年07月17日 星期五 10时13分49秒
- *   修改日期：2022年03月22日 星期二 14时13分28秒
+ *   修改日期：2022年06月25日 星期六 10时07分05秒
  *   描    述：
  *
  *================================================================*/
@@ -702,7 +702,10 @@ void channels_modbus_data_action(void *fn_ctx, void *chain_ctx)
 		case add_modbus_data_get_set_module_info_case(11):
 		case add_modbus_data_get_set_module_info_case(12):
 		case add_modbus_data_get_set_module_info_case(13):
-		case add_modbus_data_get_set_module_info_case(14): {
+		case add_modbus_data_get_set_module_info_case(14):
+		case add_modbus_data_get_set_module_info_case(15):
+		case add_modbus_data_get_set_module_info_case(16):
+		case add_modbus_data_get_set_module_info_case(17): {
 			enum_info_t module_enum_info;
 			get_module_enum_info(modbus_data_ctx->addr, &module_enum_info);
 			//debug("%s module_id %d field %s",

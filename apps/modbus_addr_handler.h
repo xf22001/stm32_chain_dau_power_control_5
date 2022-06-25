@@ -6,7 +6,7 @@
  *   文件名称：modbus_addr_handler.h
  *   创 建 者：肖飞
  *   创建日期：2020年07月17日 星期五 10时11分10秒
- *   修改日期：2021年10月20日 星期三 16时59分02秒
+ *   修改日期：2022年06月25日 星期六 10时06分50秒
  *   描    述：
  *
  *================================================================*/
@@ -74,6 +74,9 @@ typedef enum {
 	add_enum_module_info(12),
 	add_enum_module_info(13),
 	add_enum_module_info(14),
+	add_enum_module_info(15),
+	add_enum_module_info(16),
+	add_enum_module_info(17),
 	addr_current_max,
 	addr_pad_module_info_end = 120,
 
