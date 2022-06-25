@@ -6,7 +6,7 @@
  *   文件名称：power_manager_group_policy_handler.c
  *   创 建 者：肖飞
  *   创建日期：2022年06月02日 星期四 16时27分25秒
- *   修改日期：2022年06月21日 星期二 08时45分58秒
+ *   修改日期：2022年06月25日 星期六 21时28分35秒
  *   描    述：
  *
  *================================================================*/
@@ -520,7 +520,7 @@ static int check_channel_relay_fb_sync(power_manager_group_info_t *power_manager
 		OS_ASSERT(channel_relay_fb_node_info != NULL);
 
 		if(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
-			//debug("channel %d fb error!", channel_relay_fb_node_info->channel_id);
+			debug("channel %d fb error!", channel_relay_fb_node_info->channel_id);
 			ret = -1;
 			break;
 		}

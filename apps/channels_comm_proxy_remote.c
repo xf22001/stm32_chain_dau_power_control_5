@@ -6,7 +6,7 @@
  *   文件名称：channels_comm_proxy_remote.c
  *   创 建 者：肖飞
  *   创建日期：2021年09月16日 星期四 10时34分46秒
- *   修改日期：2022年06月18日 星期六 12时56分59秒
+ *   修改日期：2022年06月25日 星期六 21时55分22秒
  *   描    述：
  *
  *================================================================*/
@@ -22,7 +22,7 @@
 #include "power_manager.h"
 #include "channel.h"
 
-#define LOG_DISABLE
+//#define LOG_DISABLE
 #include "log.h"
 
 typedef struct {
@@ -279,15 +279,7 @@ static int response_channel_start(channels_info_t *channels_info, void *_command
 	channels_config_t *channels_config = channels_info->channels_config;
 	proxy_channel_item_t *proxy_channel_item = get_proxy_channel_item_by_proxy_channel_index(&channels_config->proxy_channel_info, proxy_channel_index);
 
-	if(pdu_channels_idle(channels_info) == 1) {
-		start_stop_channel(channels_info, proxy_channel_item->channel_id, CHANNEL_EVENT_TYPE_START_CHANNEL);
-	} else {
-		command_status_t *_cmd_ctx = channel_ctx->cmd_ctx + channels_comm_proxy_command_enum(MODULES_READY);
-		channel_data_ctx_t *_data_ctx = &channel_ctx->data_ctx;
-
-		_data_ctx->module_assign_info = MODULE_ASSIGN_INFO_RETRY;
-		_cmd_ctx->state = COMMAND_STATE_REQUEST;
-	}
+	start_stop_channel(channels_info, proxy_channel_item->channel_id, CHANNEL_EVENT_TYPE_START_CHANNEL);
 
 	cmd_ctx->state = COMMAND_STATE_REQUEST;
 
