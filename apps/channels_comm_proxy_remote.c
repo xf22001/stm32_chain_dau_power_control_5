@@ -6,7 +6,7 @@
  *   文件名称：channels_comm_proxy_remote.c
  *   创 建 者：肖飞
  *   创建日期：2021年09月16日 星期四 10时34分46秒
- *   修改日期：2022年06月25日 星期六 21时55分22秒
+ *   修改日期：2022年06月28日 星期二 17时26分47秒
  *   描    述：
  *
  *================================================================*/
@@ -177,22 +177,22 @@ static int response_channel_require(channels_info_t *channels_info, void *_comma
 		      get_channel_require_work_state_des(data_ctx->require_state),
 		      get_channel_require_work_state_des(channel_require->require_state));
 
-		switch(channel_require->require_state) {
-			case CHANNEL_WORK_STATE_IDLE:
-			case CHANNEL_WORK_STATE_STOP: {//停机
-				command_status_t *cmd_ctx_module_ready = channel_ctx->cmd_ctx + channels_comm_proxy_command_enum(MODULES_READY);
-
-				cmd_ctx_module_ready->state = COMMAND_STATE_IDLE;
-				channel_request_stop(channel_info, CHANNEL_RECORD_ITEM_STOP_REASON_MANUAL);
-			}
-			break;
-
-			default: {
-			}
-			break;
-		}
-
 		data_ctx->require_state = channel_require->require_state;
+	}
+
+	switch(channel_require->require_state) {
+		case CHANNEL_WORK_STATE_IDLE:
+		case CHANNEL_WORK_STATE_STOP: {//停机
+			command_status_t *cmd_ctx_module_ready = channel_ctx->cmd_ctx + channels_comm_proxy_command_enum(MODULES_READY);
+
+			cmd_ctx_module_ready->state = COMMAND_STATE_IDLE;
+			channel_request_stop(channel_info, CHANNEL_RECORD_ITEM_STOP_REASON_MANUAL);
+		}
+		break;
+
+		default: {
+		}
+		break;
 	}
 
 	if(channel_require->fault_stop != 0) {
@@ -274,12 +274,22 @@ static int response_channel_start(channels_info_t *channels_info, void *_command
 	command_item_t *item = (command_item_t *)_command_item;
 	channels_comm_proxy_channel_ctx_t *channel_ctx = channels_comm_proxy_ctx->channels_comm_proxy_channel_ctx + proxy_channel_index;
 	command_status_t *cmd_ctx = channel_ctx->cmd_ctx + item->cmd;
-	//channel_data_ctx_t *data_ctx = &channel_ctx->data_ctx;
+	channel_data_ctx_t *data_ctx = &channel_ctx->data_ctx;
 	//can_com_cmd_common_t *can_com_cmd_common = (can_com_cmd_common_t *)channels_comm_proxy_ctx->can_rx_msg->Data;
 	channels_config_t *channels_config = channels_info->channels_config;
 	proxy_channel_item_t *proxy_channel_item = get_proxy_channel_item_by_proxy_channel_index(&channels_config->proxy_channel_info, proxy_channel_index);
 
-	start_stop_channel(channels_info, proxy_channel_item->channel_id, CHANNEL_EVENT_TYPE_START_CHANNEL);
+	switch(data_ctx->require_state) {
+		case CHANNEL_WORK_STATE_IDLE:
+		case CHANNEL_WORK_STATE_STOP: {//停机
+		}
+		break;
+
+		default: {
+			start_stop_channel(channels_info, proxy_channel_item->channel_id, CHANNEL_EVENT_TYPE_START_CHANNEL);
+		}
+		break;
+	}
 
 	cmd_ctx->state = COMMAND_STATE_REQUEST;
 
@@ -764,17 +774,20 @@ static void channels_comm_proxy_request(channels_info_t *channels_info, can_info
 	channels_comm_proxy_ctx_t *channels_comm_proxy_ctx = (channels_comm_proxy_ctx_t *)channels_info->channels_comm_proxy_ctx;
 	channels_config_t *channels_config = channels_info->channels_config;
 	uint8_t proxy_channel_number = channels_config->proxy_channel_info.proxy_channel_number;
+	static int channel_id = 0;
+	static int cmd_index = 0;
 	int i;
 	int j;
 	int ret;
+	uint8_t exit = 0;
 
-	for(j = 0; j < proxy_channel_number; j++) {
-		proxy_channel_item_t *proxy_channel_item = get_proxy_channel_item_by_proxy_channel_index(&channels_config->proxy_channel_info, j);
-		channels_comm_proxy_channel_ctx_t *channels_comm_proxy_channel_ctx = channels_comm_proxy_ctx->channels_comm_proxy_channel_ctx + j;
+	for(j = 0; j < proxy_channel_number; j++, channel_id = (channel_id + j) % (proxy_channel_number)) {
+		proxy_channel_item_t *proxy_channel_item = get_proxy_channel_item_by_proxy_channel_index(&channels_config->proxy_channel_info, channel_id);
+		channels_comm_proxy_channel_ctx_t *channels_comm_proxy_channel_ctx = channels_comm_proxy_ctx->channels_comm_proxy_channel_ctx + channel_id;
 
 		for(i = 0; i < ARRAY_SIZE(channels_comm_proxy_command_table); i++) {
 			uint32_t ticks = osKernelSysTick();
-			command_item_t *item = channels_comm_proxy_command_table[i];
+			command_item_t *item = channels_comm_proxy_command_table[cmd_index];
 			command_status_t *cmd_ctx = channels_comm_proxy_channel_ctx->cmd_ctx + item->cmd;
 			can_com_cmd_common_t *can_com_cmd_common = (can_com_cmd_common_t *)channels_comm_proxy_ctx->can_tx_msg.Data;
 			u_com_can_id_t *u_com_can_id = (u_com_can_id_t *)&channels_comm_proxy_ctx->can_tx_msg.ExtId;
@@ -803,11 +816,11 @@ static void channels_comm_proxy_request(channels_info_t *channels_info, can_info
 
 			can_com_cmd_common->cmd = item->cmd_code;
 
-			ret = item->request_callback(channels_info, item, j);
+			ret = item->request_callback(channels_info, item, channel_id);
 
 			//debug("request channel %d(%d), cmd %d(%s), index:%d",
 			//      proxy_channel_item->channel_id,
-			//      j,
+			//      channel_id,
 			//      item->cmd,
 			//      get_channels_comm_proxy_command_des(item->cmd),
 			//      can_com_cmd_common->index);
@@ -815,7 +828,7 @@ static void channels_comm_proxy_request(channels_info_t *channels_info, can_info
 			if(ret != 0) {
 				debug("process channel %d(%d), cmd %d(%s), index %d error!",
 				      proxy_channel_item->channel_id,
-				      j,
+				      channel_id,
 				      item->cmd,
 				      get_channels_comm_proxy_command_des(item->cmd),
 				      can_com_cmd_common->index);
@@ -830,19 +843,25 @@ static void channels_comm_proxy_request(channels_info_t *channels_info, can_info
 			ret = can_tx_data(can_info, &channels_comm_proxy_ctx->can_tx_msg, 10);
 
 			if(ret != 0) {//发送失败
-				channels_comm_proxy_set_connect_state(channels_comm_proxy_ctx, j, 0);
+				channels_comm_proxy_set_connect_state(channels_comm_proxy_ctx, channel_id, 0);
 
 				debug("send channel %d(%d), cmd %d(%s), index:%d error!",
 				      proxy_channel_item->channel_id,
-				      j,
+				      channel_id,
 				      item->cmd,
 				      get_channels_comm_proxy_command_des(item->cmd),
 				      can_com_cmd_common->index);
 			}
 
-			can_info_signal(can_info);
+			exit = 1;
 
-			return;
+			if(exit != 0) {
+				break;
+			}
+		}
+
+		if(exit != 0) {
+			break;
 		}
 	}
 }
