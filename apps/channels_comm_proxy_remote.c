@@ -6,7 +6,7 @@
  *   文件名称：channels_comm_proxy_remote.c
  *   创 建 者：肖飞
  *   创建日期：2021年09月16日 星期四 10时34分46秒
- *   修改日期：2022年06月29日 星期三 10时00分49秒
+ *   修改日期：2022年06月29日 星期三 13时16分41秒
  *   描    述：
  *
  *================================================================*/
@@ -409,7 +409,7 @@ static command_item_t command_item_pdu_status = {
 	.cmd = channels_comm_proxy_command_enum(DAU_STATUS),
 	.cmd_code = channels_comm_proxy_command_code_enum(DAU_STATUS),
 	.broadcast = 1,
-	.request_period = 50,
+	.request_period = 200,
 	.request_callback = request_pdu_status,
 	.response_callback = response_callback_proxy_null,
 	.timeout_callback = timeout_callback_proxy_null,
@@ -781,11 +781,11 @@ static void channels_comm_proxy_request(channels_info_t *channels_info, can_info
 	int ret;
 	uint8_t exit = 0;
 
-	for(j = 0; j < proxy_channel_number; j++, channel_id = (channel_id + j) % (proxy_channel_number)) {
+	for(j = 0; j < proxy_channel_number; j++, channel_id = (channel_id + 1) % (proxy_channel_number)) {
 		proxy_channel_item_t *proxy_channel_item = get_proxy_channel_item_by_proxy_channel_index(&channels_config->proxy_channel_info, channel_id);
 		channels_comm_proxy_channel_ctx_t *channels_comm_proxy_channel_ctx = channels_comm_proxy_ctx->channels_comm_proxy_channel_ctx + channel_id;
 
-		for(i = 0; i < ARRAY_SIZE(channels_comm_proxy_command_table); i++, cmd_index = (cmd_index + i) % (ARRAY_SIZE(channels_comm_proxy_command_table))) {
+		for(i = 0; i < ARRAY_SIZE(channels_comm_proxy_command_table); i++, cmd_index = (cmd_index + 1) % (ARRAY_SIZE(channels_comm_proxy_command_table))) {
 			uint32_t ticks = osKernelSysTick();
 			command_item_t *item = channels_comm_proxy_command_table[cmd_index];
 			command_status_t *cmd_ctx = channels_comm_proxy_channel_ctx->cmd_ctx + item->cmd;
