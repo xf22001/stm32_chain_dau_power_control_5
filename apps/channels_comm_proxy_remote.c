@@ -6,7 +6,7 @@
  *   文件名称：channels_comm_proxy_remote.c
  *   创 建 者：肖飞
  *   创建日期：2021年09月16日 星期四 10时34分46秒
- *   修改日期：2022年06月28日 星期二 17时26分47秒
+ *   修改日期：2022年06月29日 星期三 09时55分23秒
  *   描    述：
  *
  *================================================================*/
@@ -785,7 +785,7 @@ static void channels_comm_proxy_request(channels_info_t *channels_info, can_info
 		proxy_channel_item_t *proxy_channel_item = get_proxy_channel_item_by_proxy_channel_index(&channels_config->proxy_channel_info, channel_id);
 		channels_comm_proxy_channel_ctx_t *channels_comm_proxy_channel_ctx = channels_comm_proxy_ctx->channels_comm_proxy_channel_ctx + channel_id;
 
-		for(i = 0; i < ARRAY_SIZE(channels_comm_proxy_command_table); i++) {
+		for(i = 0; i < ARRAY_SIZE(channels_comm_proxy_command_table); i++, cmd_index = (cmd_index + i) % (ARRAY_SIZE(channels_comm_proxy_command_table))) {
 			uint32_t ticks = osKernelSysTick();
 			command_item_t *item = channels_comm_proxy_command_table[cmd_index];
 			command_status_t *cmd_ctx = channels_comm_proxy_channel_ctx->cmd_ctx + item->cmd;

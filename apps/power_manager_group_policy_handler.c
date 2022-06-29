@@ -6,7 +6,7 @@
  *   文件名称：power_manager_group_policy_handler.c
  *   创 建 者：肖飞
  *   创建日期：2022年06月02日 星期四 16时27分25秒
- *   修改日期：2022年06月25日 星期六 21时28分35秒
+ *   修改日期：2022年06月29日 星期三 09时35分04秒
  *   描    述：
  *
  *================================================================*/
@@ -1644,6 +1644,7 @@ static int assign_priority(void *_power_manager_group_info)
 
 static power_manager_group_policy_handler_t power_manager_group_policy_handler_priority = {
 	.policy = POWER_MANAGER_GROUP_POLICY_PRIORITY,
+	.reassigned_enable = 1,
 	.init = init_priority,
 	.deinit = deinit_priority,
 	.channel_start = channel_start_priority,
