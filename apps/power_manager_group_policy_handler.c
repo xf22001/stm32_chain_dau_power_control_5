@@ -6,7 +6,7 @@
  *   文件名称：power_manager_group_policy_handler.c
  *   创 建 者：肖飞
  *   创建日期：2022年06月02日 星期四 16时27分25秒
- *   修改日期：2022年06月29日 星期三 09时35分04秒
+ *   修改日期：2022年06月30日 星期四 15时26分55秒
  *   描    述：
  *
  *================================================================*/
@@ -561,6 +561,7 @@ static int action_relay_map(power_manager_group_info_t *power_manager_group_info
 			state = GPIO_PIN_SET;
 		}
 
+		debug("set relay %d state %d", relay_node_info->relay_id, state);
 		HAL_GPIO_WritePin(relay_node_info->gpio_port, relay_node_info->gpio_pin, state);
 	}
 
@@ -878,6 +879,11 @@ static void channel_info_assign_one_power_module_group_average(power_manager_cha
 			                  power_module_group_bind_node_item_prev->id,
 			                  power_module_group_bind_node_item_next->id);
 			OS_ASSERT(relay_node_info != NULL);
+			debug("channel %d set relay %d for node %d -> %d",
+			      power_manager_channel_info->id,
+			      relay_node_info->relay_id,
+			      power_module_group_bind_node_item_prev->id,
+			      power_module_group_bind_node_item_next->id);
 			set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
 		}
 
@@ -967,6 +973,11 @@ static void channel_info_assign_one_power_module_group_average(power_manager_cha
 			                  power_module_group_bind_node_item_prev->id,
 			                  power_module_group_bind_node_item_next->id);
 			OS_ASSERT(relay_node_info != NULL);
+			debug("channel %d set relay %d for node %d -> %d",
+			      power_manager_channel_info->id,
+			      relay_node_info->relay_id,
+			      power_module_group_bind_node_item_prev->id,
+			      power_module_group_bind_node_item_next->id);
 			set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
 		}
 
@@ -1207,7 +1218,7 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 			//}
 
 			//已在使用中
-			if(list_contain(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list) == 0) {//被当前通道使用
+			if(list_contain(&power_module_group_info->list, &list_unneeded_power_module_group) == 0) {//被当前通道使用
 				power_module_group_bind_node_state = 1;
 				break;
 			}
@@ -1217,9 +1228,8 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 			break;
 		}
 
-		if(power_module_group_bind_node_state == 1) {
-			power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
-			continue;
+		if(power_module_group_bind_node_state == 0) {
+			break;
 		} else if(power_module_group_bind_node_state == 2) {
 			break;
 		}
@@ -1239,6 +1249,11 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 		                  power_module_group_bind_node_item_prev->id,
 		                  power_module_group_bind_node_item_next->id);
 		OS_ASSERT(relay_node_info != NULL);
+		debug("channel %d set relay %d for node %d -> %d",
+		      power_manager_channel_info->id,
+		      relay_node_info->relay_id,
+		      power_module_group_bind_node_item_prev->id,
+		      power_module_group_bind_node_item_next->id);
 		set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
 
 		power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
@@ -1292,7 +1307,7 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 			//}
 
 			//已在使用中
-			if(list_contain(&power_module_group_info->list, &power_manager_channel_info->power_module_group_list) == 0) {//被当前通道使用
+			if(list_contain(&power_module_group_info->list, &list_unneeded_power_module_group) == 0) {//被当前通道使用
 				power_module_group_bind_node_state = 1;
 				break;
 			}
@@ -1302,9 +1317,8 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 			break;
 		}
 
-		if(power_module_group_bind_node_state == 1) {
-			power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
-			continue;
+		if(power_module_group_bind_node_state == 0) {
+			break;
 		} else if(power_module_group_bind_node_state == 2) {
 			break;
 		}
@@ -1324,6 +1338,11 @@ static void channel_info_deactive_unneeded_power_module_group_priority(power_man
 		                  power_module_group_bind_node_item_prev->id,
 		                  power_module_group_bind_node_item_next->id);
 		OS_ASSERT(relay_node_info != NULL);
+		debug("channel %d set relay %d for node %d -> %d",
+		      power_manager_channel_info->id,
+		      relay_node_info->relay_id,
+		      power_module_group_bind_node_item_prev->id,
+		      power_module_group_bind_node_item_next->id);
 		set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
 
 		power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
@@ -1341,7 +1360,7 @@ exit:
 			power_module_item_info->status.state = POWER_MODULE_ITEM_STATE_PREPARE_DEACTIVE;
 		}
 		list_move_tail(&power_module_group_info->list, &power_manager_group_info->power_module_group_deactive_list);
-		debug("remove power module group %d to channel %d", power_module_group_info->id, power_manager_channel_info->id);
+		debug("remove power module group %d from channel %d", power_module_group_info->id, power_manager_channel_info->id);
 	}
 }
 
@@ -1476,7 +1495,7 @@ static void channel_info_assign_power_module_group_priority(power_manager_channe
 			break;
 		}
 
-		if(power_module_group_bind_node_state == 1) {
+		if(power_module_group_bind_node_state == 1) {//该节点已经在使用中，应该在free中被恢复，不处理
 			power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
 			continue;
 		} else if(power_module_group_bind_node_state == 2) {
@@ -1506,6 +1525,11 @@ static void channel_info_assign_power_module_group_priority(power_manager_channe
 				                  power_module_group_bind_node_item_prev->id,
 				                  power_module_group_bind_node_item_next->id);
 				OS_ASSERT(relay_node_info != NULL);
+				debug("channel %d set relay %d for node %d -> %d",
+				      power_manager_channel_info->id,
+				      relay_node_info->relay_id,
+				      power_module_group_bind_node_item_prev->id,
+				      power_module_group_bind_node_item_next->id);
 				set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
 			}
 		}
@@ -1571,7 +1595,7 @@ static void channel_info_assign_power_module_group_priority(power_manager_channe
 			break;
 		}
 
-		if(power_module_group_bind_node_state == 1) {
+		if(power_module_group_bind_node_state == 1) {//该节点已经在使用中，应该在free中被恢复，不处理
 			power_module_group_bind_node_item_prev = power_module_group_bind_node_item_next;
 			continue;
 		} else if(power_module_group_bind_node_state == 2) {
@@ -1601,6 +1625,11 @@ static void channel_info_assign_power_module_group_priority(power_manager_channe
 				                  power_module_group_bind_node_item_prev->id,
 				                  power_module_group_bind_node_item_next->id);
 				OS_ASSERT(relay_node_info != NULL);
+				debug("channel %d set relay %d for node %d -> %d",
+				      power_manager_channel_info->id,
+				      relay_node_info->relay_id,
+				      power_module_group_bind_node_item_prev->id,
+				      power_module_group_bind_node_item_next->id);
 				set_bitmap_value(power_manager_group_policy_ctx->relay_map, relay_node_info->relay_id, 1);
 			}
 		}
