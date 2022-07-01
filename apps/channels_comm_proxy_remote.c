@@ -6,7 +6,7 @@
  *   文件名称：channels_comm_proxy_remote.c
  *   创 建 者：肖飞
  *   创建日期：2021年09月16日 星期四 10时34分46秒
- *   修改日期：2022年06月29日 星期三 13时16分41秒
+ *   修改日期：2022年07月01日 星期五 16时43分20秒
  *   描    述：
  *
  *================================================================*/
@@ -721,15 +721,15 @@ static void channels_comm_proxy_request_periodic(channels_info_t *channels_info)
 			   (item->cmd == channels_comm_proxy_command_enum(CHANNEL_OUTPUT))) {
 				if(ticks_duration(ticks, cmd_ctx->recv_stamp) >= 1000) {
 					channels_comm_proxy_set_connect_state(channels_comm_proxy_ctx, j, 0);
-					debug("channel %d(%d), cmd %d(%s), index %d timeout, ticks:%d, recv_stamp:%d, connect state:%d",
-					      proxy_channel_item->channel_id,
-					      j,
-					      item->cmd,
-					      get_channels_comm_proxy_command_des(item->cmd),
-					      cmd_ctx->index,
-					      ticks,
-					      cmd_ctx->recv_stamp,
-					      channels_comm_proxy_get_connect_state(channels_info, j));
+					//debug("channel %d(%d), cmd %d(%s), index %d timeout, ticks:%d, recv_stamp:%d, connect state:%d",
+					//      proxy_channel_item->channel_id,
+					//      j,
+					//      item->cmd,
+					//      get_channels_comm_proxy_command_des(item->cmd),
+					//      cmd_ctx->index,
+					//      ticks,
+					//      cmd_ctx->recv_stamp,
+					//      channels_comm_proxy_get_connect_state(channels_info, j));
 				}
 			}
 
