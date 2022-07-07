@@ -6,7 +6,7 @@
  *   文件名称：probe_tool_handler.c
  *   创 建 者：肖飞
  *   创建日期：2020年03月20日 星期五 12时48分07秒
- *   修改日期：2022年07月06日 星期三 16时41分51秒
+ *   修改日期：2022年07月07日 星期四 12时03分17秒
  *   描    述：
  *
  *================================================================*/
@@ -116,6 +116,11 @@ static void fn3(request_t *request)
 			return;
 		}
 
+		if(set_firmware_valid(0) != 0) {
+			debug("");
+			return;
+		}
+
 		_printf("reset to bootloader!\n");
 
 		HAL_NVIC_SystemReset();
@@ -123,7 +128,7 @@ static void fn3(request_t *request)
 	}
 
 	if(stage == 0) {
-		flash_erase_sector(IAP_CONST_FW_ADDRESS_START_SECTOR, IAP_CONST_FW_ADDRESS_SECTOR_NUMBER);
+		OS_ASSERT(flash_erase_sector(IAP_CONST_FW_ADDRESS_START_SECTOR, IAP_CONST_FW_ADDRESS_SECTOR_NUMBER) == 0);
 	} else if(stage == 1) {
 		if(data_size == 4) {
 			uint32_t *p = (uint32_t *)data;
@@ -160,7 +165,13 @@ static void fn3(request_t *request)
 	loopback(request);
 
 	if(start_upgrade_app != 0) {
+		iap_app_config_t *iap_app_config = (iap_app_config_t *)IAP_CONST_APP_CONFIG_ADDRESS;
+		iap_fw_config_t *iap_fw_config = (iap_fw_config_t *)IAP_CONST_FW_CONFIG_ADDRESS;
+
 		_printf("start upgrade app!\n");
+
+		OS_ASSERT(iap_app_config->app_valid == 0xff);
+		OS_ASSERT(iap_fw_config->fw_valid == 0xff);
 
 		if(set_firmware_size(total_size) != 0) {
 			debug("");
@@ -174,7 +185,8 @@ static void fn3(request_t *request)
 			debug("");
 		}
 
-		osDelay(100);
+		OS_ASSERT(iap_app_config->app_valid == 1);
+		OS_ASSERT(iap_fw_config->fw_valid == 1);
 
 		HAL_NVIC_SystemReset();
 	}
@@ -510,6 +522,34 @@ static void fn17(request_t *request)
 	}
 }
 
+static void fn18(request_t *request)
+{
+	char *content = (char *)(request + 1);
+	int fn;
+	int catched;
+	int ret;
+
+	ret = sscanf(content, "%d %n", &fn, &catched);
+
+	if(ret == 1) {
+		iap_app_config_t *iap_app_config = (iap_app_config_t *)IAP_CONST_APP_CONFIG_ADDRESS;
+		iap_fw_config_t *iap_fw_config = (iap_fw_config_t *)IAP_CONST_FW_CONFIG_ADDRESS;
+		int i;
+
+		OS_ASSERT(flash_erase_sector(IAP_CONST_FW_ADDRESS_START_SECTOR, IAP_CONST_FW_ADDRESS_SECTOR_NUMBER) == 0);
+
+		debug("iap_app_config->app_valid: %p", &iap_app_config->app_valid);
+		debug("iap_fw_config->fw_valid: %p", &iap_fw_config->fw_valid);
+		OS_ASSERT(iap_app_config->app_valid == 0xff);
+		OS_ASSERT(iap_fw_config->fw_valid == 0xff);
+
+		OS_ASSERT(set_app_valid(1) == 0);
+		OS_ASSERT(set_firmware_valid(1) == 0);
+		OS_ASSERT(iap_app_config->app_valid == 1);
+		OS_ASSERT(iap_fw_config->fw_valid == 1);
+	}
+}
+
 static server_item_t server_map[] = {
 	{1, fn1},
 	{2, fn2},
@@ -524,6 +564,7 @@ static server_item_t server_map[] = {
 	{11, fn11},
 	{14, fn14},
 	{17, fn17},
+	{18, fn18},
 };
 
 server_map_info_t server_map_info = {

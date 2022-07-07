@@ -128,7 +128,9 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
   /* USER CODE BEGIN CAN1_MspInit 1 */
 
+#if defined(SOC_GD)
     CLEAR_BIT(canHandle->Instance->MCR, CAN_MCR_SLEEP);
+#endif
 
   /* USER CODE END CAN1_MspInit 1 */
   }
@@ -163,7 +165,9 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     HAL_NVIC_EnableIRQ(CAN2_RX1_IRQn);
   /* USER CODE BEGIN CAN2_MspInit 1 */
 
+#if defined(SOC_GD)
     CLEAR_BIT(canHandle->Instance->MCR, CAN_MCR_SLEEP);
+#endif
 
   /* USER CODE END CAN2_MspInit 1 */
   }
