@@ -6,7 +6,7 @@
 #   文件名称：config.mk
 #   创 建 者：肖飞
 #   创建日期：2021年08月26日 星期四 11时10分19秒
-#   修改日期：2022年07月07日 星期四 12时23分50秒
+#   修改日期：2022年07月13日 星期三 10时17分20秒
 #   描    述：
 #
 #================================================================
@@ -30,6 +30,10 @@ CONFIG_LIST += SAL_WIZNET
 #CONFIG_LIST += SAL_AT
 #CONFIG_LIST += SAL_DTU
 CONFIG_LIST += SOC_GD
+
+#CONFIG_LIST += POWER_MODULE_STATEGRID_ZTE
+CONFIG_LIST += POWER_MODULE_STATEGRID_TONGHE
+CONFIG_LIST += POWER_MODULE_STATEGRID_TONGHE_DENOISE
 
 $(foreach config_item,$(CONFIG_LIST),$(eval $(addprefix CONFIG_,$(config_item)) := $(config_item)))
 

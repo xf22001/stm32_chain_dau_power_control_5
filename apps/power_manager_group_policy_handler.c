@@ -495,7 +495,7 @@ channel_relay_fb_node_info_t *get_channel_relay_fb_node_info(uint8_t power_manag
 	return channel_relay_fb_node_info;
 }
 
-static int check_channel_relay_fb_sync(power_manager_group_info_t *power_manager_group_info)
+static int channel_relay_fb_sync(power_manager_group_info_t *power_manager_group_info)
 {
 	int ret = 0;
 	power_manager_info_t *power_manager_info = (power_manager_info_t *)power_manager_group_info->power_manager_info;
@@ -524,6 +524,36 @@ static int check_channel_relay_fb_sync(power_manager_group_info_t *power_manager
 			ret = -1;
 			break;
 		}
+	}
+
+	return ret;
+}
+
+static int check_channel_relay_fb(power_manager_group_info_t *power_manager_group_info)
+{
+	int ret = 0;
+	power_manager_info_t *power_manager_info = (power_manager_info_t *)power_manager_group_info->power_manager_info;
+	channels_info_t *channels_info = power_manager_info->channels_info;
+	int i;
+	channel_relay_fb_node_info_t *channel_relay_fb_node_info;
+
+	for(i = 0; i < channels_info->channel_number; i++) {
+		power_manager_channel_info_t *power_manager_channel_info = power_manager_info->power_manager_channel_info + i;
+		channel_info_t *channel_info = channels_info->channel_info + i;
+		uint8_t state = 0;
+
+		if(power_manager_channel_info->power_manager_group_info != power_manager_group_info) {
+			continue;
+		}
+
+		channel_relay_fb_node_info = get_channel_relay_fb_node_info(power_manager_group_info->id, power_manager_channel_info->id);
+		OS_ASSERT(channel_relay_fb_node_info != NULL);
+
+		if(HAL_GPIO_ReadPin(channel_relay_fb_node_info->gpio_port_fb, channel_relay_fb_node_info->gpio_pin_fb) == GPIO_PIN_SET) {
+			state = 1;
+		}
+
+		channel_info->output_relay_state = state;
 	}
 
 	return ret;
@@ -1038,7 +1068,16 @@ static int _sync(void *_power_manager_group_info)
 	int ret = 0;
 	power_manager_group_info_t *power_manager_group_info = (power_manager_group_info_t *)_power_manager_group_info;
 	debug("power manager group %d sync", power_manager_group_info->id);
-	ret = check_channel_relay_fb_sync(power_manager_group_info);
+	ret = channel_relay_fb_sync(power_manager_group_info);
+	return ret;
+}
+
+static int _periodic(void *_power_manager_group_info)
+{
+	int ret = 0;
+	power_manager_group_info_t *power_manager_group_info = (power_manager_group_info_t *)_power_manager_group_info;
+	//debug("power manager group %d periodic", power_manager_group_info->id);
+	ret = check_channel_relay_fb(power_manager_group_info);
 	return ret;
 }
 
@@ -1052,6 +1091,7 @@ static power_manager_group_policy_handler_t power_manager_group_policy_handler_a
 	.assign = assign_average,
 	.config = _config,
 	.sync = _sync,
+	.periodic = _periodic,
 };
 
 static int init_priority(void *_power_manager_info)
@@ -1682,6 +1722,7 @@ static power_manager_group_policy_handler_t power_manager_group_policy_handler_p
 	.assign = assign_priority,
 	.config = _config,
 	.sync = _sync,
+	.periodic = _periodic,
 };
 
 static power_manager_group_policy_handler_t *power_manager_group_policy_handler_sz[] = {
@@ -1733,7 +1774,7 @@ void power_manager_restore_config(channels_info_t *channels_info)
 
 		for(j = 0; j < power_manager_group_settings->power_module_group_number; j++) {
 			power_module_group_settings_t *power_module_group_settings = &power_manager_group_settings->power_module_group_settings[j];
-			power_module_group_settings->power_module_number = 3;
+			power_module_group_settings->power_module_number = 2;
 		}
 	}
 }
