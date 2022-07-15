@@ -6,7 +6,7 @@
  *   文件名称：channels_config.c
  *   创 建 者：肖飞
  *   创建日期：2020年06月18日 星期四 09时17分57秒
- *   修改日期：2022年07月08日 星期五 16时09分33秒
+ *   修改日期：2022年07月15日 星期五 13时45分52秒
  *   描    述：
  *
  *================================================================*/
@@ -87,8 +87,8 @@ static channels_config_t channels_config_0 = {
 	.fan_port = rey5_GPIO_Port,
 	.fan_pin = rey5_Pin,
 
-	.fan_fb_port = ntc6_GPIO_Port,
-	.fan_fb_pin = ntc6_Pin,
+	//.fan_fb_port = ntc6_GPIO_Port,
+	//.fan_fb_pin = ntc6_Pin,
 
 	.door_port = in1_GPIO_Port,
 	.door_pin = in1_Pin,
