@@ -6,7 +6,7 @@
  *   文件名称：channels_comm_proxy_remote.c
  *   创 建 者：肖飞
  *   创建日期：2021年09月16日 星期四 10时34分46秒
- *   修改日期：2022年07月11日 星期一 11时09分46秒
+ *   修改日期：2022年07月19日 星期二 10时26分29秒
  *   描    述：
  *
  *================================================================*/
@@ -132,6 +132,12 @@ static int request_channel_require(channels_info_t *channels_info, void *_comman
 	command_status_t *cmd_ctx = channel_ctx->cmd_ctx + item->cmd;
 	//channel_data_ctx_t *data_ctx = &channel_ctx->data_ctx;
 	//can_com_cmd_common_t *can_com_cmd_common = (can_com_cmd_common_t *)channels_comm_proxy_ctx->can_tx_msg.Data;
+	channels_config_t *channels_config = channels_info->channels_config;
+	proxy_channel_item_t *proxy_channel_item = get_proxy_channel_item_by_proxy_channel_index(&channels_config->proxy_channel_info, proxy_channel_index);
+	channel_info_t *channel_info = channels_info->channel_info + proxy_channel_item->channel_id;
+	channel_fb_state_t *channel_fb_state = (channel_fb_state_t *)channels_comm_proxy_ctx->can_tx_msg.Data;
+
+	channel_fb_state->output_relay_state = channel_info->output_relay_state;
 
 	cmd_ctx->state = COMMAND_STATE_IDLE;
 
@@ -576,56 +582,6 @@ static command_item_t command_item_input_voltage = {
 	.timeout_callback = timeout_callback_proxy_null,
 };
 
-static int request_channel_fb_state(channels_info_t *channels_info, void *_command_item, uint8_t proxy_channel_index)
-{
-	int ret = -1;
-	channels_comm_proxy_ctx_t *channels_comm_proxy_ctx = (channels_comm_proxy_ctx_t *)channels_info->channels_comm_proxy_ctx;
-	command_item_t *item = (command_item_t *)_command_item;
-	channels_comm_proxy_channel_ctx_t *channel_ctx = channels_comm_proxy_ctx->channels_comm_proxy_channel_ctx + proxy_channel_index;
-	command_status_t *cmd_ctx = channel_ctx->cmd_ctx + item->cmd;
-	channel_data_ctx_t *data_ctx = &channel_ctx->data_ctx;
-	channels_config_t *channels_config = channels_info->channels_config;
-	proxy_channel_item_t *proxy_channel_item = get_proxy_channel_item_by_proxy_channel_index(&channels_config->proxy_channel_info, proxy_channel_index);
-	channel_info_t *channel_info = channels_info->channel_info + proxy_channel_item->channel_id;
-	//can_com_cmd_common_t *can_com_cmd_common = (can_com_cmd_common_t *)channels_comm_proxy_ctx->can_tx_msg.Data;
-	channel_fb_state_t *channel_fb_state = (channel_fb_state_t *)channels_comm_proxy_ctx->can_tx_msg.Data;
-
-	channel_fb_state->output_relay_state = channel_info->output_relay_state;
-
-	cmd_ctx->state = COMMAND_STATE_RESPONSE;
-
-	ret = 0;
-
-	return ret;
-}
-
-static int response_channel_fb_state(channels_info_t *channels_info, void *_command_item, uint8_t proxy_channel_index)
-{
-	int ret = -1;
-	channels_comm_proxy_ctx_t *channels_comm_proxy_ctx = (channels_comm_proxy_ctx_t *)channels_info->channels_comm_proxy_ctx;
-	command_item_t *item = (command_item_t *)_command_item;
-	channels_comm_proxy_channel_ctx_t *channel_ctx = channels_comm_proxy_ctx->channels_comm_proxy_channel_ctx + proxy_channel_index;
-	command_status_t *cmd_ctx = channel_ctx->cmd_ctx + item->cmd;
-	//channel_data_ctx_t *data_ctx = &channel_ctx->data_ctx;
-	//can_com_cmd_common_t *can_com_cmd_common = (can_com_cmd_common_t *)channels_comm_proxy_ctx->can_rx_msg->Data;
-
-	cmd_ctx->state = COMMAND_STATE_IDLE;
-
-	ret = 0;
-
-	return ret;
-}
-
-static command_item_t command_item_channel_fb_state = {
-	.cmd = channels_comm_proxy_command_enum(CHANNEL_FB_STATE),
-	.cmd_code = channels_comm_proxy_command_code_enum(CHANNEL_FB_STATE),
-	.broadcast = 0,
-	.request_period = 300,
-	.request_callback = request_channel_fb_state,
-	.response_callback = response_channel_fb_state,
-	.timeout_callback = timeout_callback_proxy_null,
-};
-
 static command_item_t *channels_comm_proxy_command_table[] = {
 	&command_item_channel_require,
 	&command_item_channel_start,
@@ -634,7 +590,6 @@ static command_item_t *channels_comm_proxy_command_table[] = {
 	&command_item_modules_ready,
 	&command_item_modules_status,
 	&command_item_input_voltage,
-	&command_item_channel_fb_state,
 };
 
 static void channels_comm_proxy_set_connect_state(channels_comm_proxy_ctx_t *channels_comm_proxy_ctx, uint8_t proxy_channel_index, uint8_t state)
